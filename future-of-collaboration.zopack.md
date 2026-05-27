@@ -2,7 +2,7 @@
 format: zopack
 version: "1.0"
 name: future-of-collaboration
-description: "Zo Future of Collaboration grid wall connected to the live examples index with eagerly loaded portal previews."
+description: "Zo Future of Collaboration grid wall connected to the live examples index with mounted lazy portal previews."
 author: etok.zo.computer
 routes: 2
 exported: 2026-05-27
@@ -10,7 +10,7 @@ exported: 2026-05-27
 
 # future-of-collaboration
 
-Zo Future of Collaboration grid wall connected to the live examples index with eagerly loaded portal previews.
+Zo Future of Collaboration grid wall connected to the live examples index with mounted lazy portal previews.
 
 ## Routes
 
@@ -124,7 +124,7 @@ function TilePortal({ tile, mode = "tile" }: { tile: Tile; mode?: "tile" | "pane
       <iframe
         title={`${tile.projectTitle} portal preview`}
         src={tile.projectUrl}
-        loading="eager"
+        loading="lazy"
         className="pointer-events-none absolute left-0 top-0 border-0"
         style={{
           width: size,
@@ -269,7 +269,7 @@ export default function FutureOfCollaboration() {
             </div>
             <div className="bg-[#222] p-5 font-mono text-sm leading-6 text-[#bdbdbd] sm:p-7">
               <div className="text-[#00a8ff]">rules</div>
-              <p className="mt-3">The live examples index is now mapped onto the first 30 grid tiles. Populated tiles mount their portal previews immediately; open tiles remain monochrome position colors until claimed.</p>
+              <p className="mt-3">The live examples index is now mapped onto the first 30 grid tiles. Populated tiles mount their portal elements immediately while browser-level lazy loading defers offscreen iframe work; open tiles remain monochrome position colors until claimed.</p>
               <a className="mt-6 inline-block rounded border border-[#00a8ff] px-3 py-2 text-[#00a8ff] hover:bg-[#00a8ff] hover:text-black" href="/examples">
                 Open live examples index
               </a>
