@@ -5,6 +5,7 @@ Planning and design-doc repo for the Zo event experience: a standalone app where
 ## Working Documents
 
 - `docs/design-doc.md` - current product, design, engineering, event-ops, and open-question plan.
+- `future-of-collaboration.zopack.md` - current Zo Space prototype pack for `https://etok.zo.space/future-of-collaboration`.
 
 ## Current Thesis
 
