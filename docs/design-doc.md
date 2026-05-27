@@ -65,6 +65,7 @@ Locked working model:
 - Tile identity: one tile represents one Zo user.
 - Assignment: a central SQLite or DuckDB-backed allocator assigns tiles to Zo users.
 - Onboarding source: the user is onboarded or associated by running a Skill in their Zo, so the user's Zo username is known and can be associated with records in the central service.
+- Skill payload: the attendee-run Skill sends username, signed/Zo API-backed identity context, and project metadata. Users can later modify or undo submissions if they made a mistake.
 - Tile record: each tile has a number, color, Zo username, name, project title, project link, original preview source, status, and moderation state.
 - Claim timing: claim-first is encouraged; a user can reserve their tile before finishing their Space/project.
 - Project links may point to any URL, not only `zo.space`, because Zo supports custom domains.
@@ -93,7 +94,7 @@ Open visual variants:
 - Subtle texture/noise over the monochrome tile, if pure flat color feels too sterile.
 - Color tile with pixel/noise texture.
 - Striped gradient groups rather than strict left-to-right tile order.
-- Browser preview-in-tile via HTML portal-like behavior remains experimental. The product requirement is the monochrome-to-polychrome transition, not a specific browser primitive.
+- Browser preview-in-tile should use a portal-style embedded preview for arbitrary URLs where possible. The product requirement is the monochrome-to-polychrome transition; the portal implementation needs browser-support validation.
 
 ### Merch Workflow
 
@@ -141,7 +142,7 @@ type Tile = {
   projectTitle?: string;
   projectUrl?: string;
   previewUrl?: string;
-  moderationStatus: "pending" | "flagged" | "approved" | "hidden";
+  moderationStatus: "live" | "flagged" | "hidden";
   moderationReason?: string;
 };
 ```
@@ -152,6 +153,8 @@ Minimum claim input:
 - Project title.
 - Project link.
 - Zo username, associated by the user's Skill-run onboarding flow.
+
+The Skill should send all claim metadata in one payload, and the central service should allow the owning Zo user to edit or undo their own submission.
 
 ### Live Update Options
 
@@ -164,17 +167,18 @@ Minimum claim input:
 - Tile claims must be atomic: two attendees cannot get the same tile.
 - The allocator assigns the next available tile to the Zo user; attendees do not manually choose tiles in v1.
 - Each Zo username gets at most one active tile unless an organizer overrides it.
+- Username spoofing is prevented by making the Zo API / Skill execution context the identity boundary rather than trusting user-entered usernames.
 - Organizers need a reset/unclaim tool for mistakes.
 - The system needs a manual override in case someone cannot complete the form.
 
 ### Moderation Requirements
 
-- AI reviews submitted names, project titles, and links.
-- Submitted public details are blocked from reveal until approved.
-- AI triages submissions and surfaces alerts to a human moderator.
-- Human approval is required before a tile can reveal its polychromatic preview and public details.
-- Moderation states must support `pending`, `flagged`, `approved`, and `hidden`.
-- The live display should degrade gracefully while moderation is pending: show the claimed monochrome tile and number, but do not reveal public details or original preview until approval.
+- Use an honesty policy by default: submissions go live immediately after a Zo-authenticated Skill submission.
+- AI reviews submitted names, project titles, and links asynchronously.
+- AI surfaces likely issues to organizers, but does not block normal submissions from appearing live.
+- Organizers can hide, edit, reset, or unclaim problematic tiles if needed.
+- Moderation states must support `live`, `flagged`, and `hidden`.
+- The live display should prioritize momentum over pre-approval. The risk of a bad tile is lower than the risk of creating a cumbersome queue that kills the event flow.
 
 ### Export Requirements
 
@@ -199,7 +203,7 @@ Minimum claim input:
 - Show the live grid on a large display.
 - Keep one facilitator watching claim failures and duplicates.
 - Keep one print-station operator workflow owner.
-- Keep one engineer with logs, admin controls, moderation alerts, and demo-mode switch.
+- Keep one engineer with logs, admin controls, AI moderation alerts, and demo-mode switch.
 - Avoid long intros; move people into the demo quickly.
 
 ### After Event
@@ -215,22 +219,20 @@ Minimum claim input:
 - Users do not understand what to submit.
 - Tile claiming creates duplicates or stuck claims.
 - Live grid feels visually underwhelming until enough people join.
-- AI moderation either flags too much, misses obviously bad content, or creates a human approval backlog.
+- AI moderation either flags too much or misses obviously bad content.
+- Honesty-policy moderation could allow a bad submission to appear briefly before cleanup.
 - Merch workflow overwhelms print operator.
 - Toronto and New York drift out of sync operationally.
 - The experience becomes a form-fill instead of a memorable collaborative act.
 
 ## Critical Decisions To Make Next
 
-1. What exactly does the attendee-run Skill send to the central service: username only, signed identity proof, or username plus project metadata?
-2. How do we prevent someone from spoofing another Zo username in the central service?
-3. Should a facilitator be able to create/attach a tile for someone who cannot run the Skill?
-4. How do we generate or capture the original polychromatic preview for arbitrary URLs, including custom domains?
-5. What is the exact visual gradient: image-sampled reference, hand-picked stops, or generated palette?
-6. How fast does human approval need to be during the live event, and who is the named approver?
-7. What does demo mode need to simulate: 100 populated tiles, live arrivals, hover details, moderation flow, or all of the above?
-8. Who gets admin access, and what can they edit/reset/hide during the event?
-9. What must be ready for the next Zo team pressure test?
+1. Should a facilitator be able to create/attach a tile for someone who cannot run the Skill?
+2. What is the exact portal implementation path and browser-support fallback for arbitrary URLs?
+3. What is the exact visual gradient: image-sampled reference, hand-picked stops, or generated palette?
+4. What does demo mode need to simulate: 100 populated tiles, live arrivals, hover details, moderation flags, or all of the above?
+5. Who gets admin access, and what can they edit/reset/hide during the event?
+6. What must be ready for the next Zo team pressure test?
 
 ## Draft Milestones
 
@@ -256,7 +258,7 @@ Minimum claim input:
 - Atomic tile claims.
 - Real-time updates with polling fallback.
 - Admin reset/export controls.
-- AI moderation alert queue with human approval gate.
+- AI moderation alerts with organizer cleanup controls.
 
 ### Milestone 3: Event Readiness
 
