@@ -2,7 +2,7 @@
 format: zopack
 version: "1.0"
 name: future-of-collaboration
-description: "Zo Future of Collaboration grid wall connected to the live examples index with portal previews."
+description: "Zo Future of Collaboration grid wall connected to the live examples index with eagerly loaded portal previews."
 author: etok.zo.computer
 routes: 2
 exported: 2026-05-27
@@ -10,7 +10,7 @@ exported: 2026-05-27
 
 # future-of-collaboration
 
-Zo Future of Collaboration grid wall connected to the live examples index with portal previews.
+Zo Future of Collaboration grid wall connected to the live examples index with eagerly loaded portal previews.
 
 ## Routes
 
@@ -124,7 +124,7 @@ function TilePortal({ tile, mode = "tile" }: { tile: Tile; mode?: "tile" | "pane
       <iframe
         title={`${tile.projectTitle} portal preview`}
         src={tile.projectUrl}
-        loading="lazy"
+        loading="eager"
         className="pointer-events-none absolute left-0 top-0 border-0"
         style={{
           width: size,
@@ -168,22 +168,20 @@ function TileArtwork({ tile, colorized }: { tile: Tile; colorized: boolean }) {
   );
 }
 
-function TileCard({ tile, active, previewing, onSelect, onPreview }: { tile: Tile; active: boolean; previewing: boolean; onSelect: (tile: Tile) => void; onPreview: (tile: Tile) => void }) {
+function TileCard({ tile, active, onSelect }: { tile: Tile; active: boolean; onSelect: (tile: Tile) => void }) {
   const hasProject = tile.status !== "empty";
 
   return (
     <button
       type="button"
       onClick={() => onSelect(tile)}
-      onMouseEnter={() => onPreview(tile)}
-      onFocus={() => onPreview(tile)}
       className={`group relative h-[156px] overflow-hidden bg-neutral-900 text-left outline-none transition duration-200 hover:z-10 hover:scale-[1.025] focus-visible:z-10 focus-visible:scale-[1.025] focus-visible:ring-2 focus-visible:ring-[#00a8ff] sm:h-[180px] ${active ? "z-10 ring-2 ring-[#00a8ff]" : ""}`}
       aria-label={`Tile ${tile.id}: ${tile.projectTitle} by ${tile.ownerName}`}
     >
-      <TileArtwork tile={tile} colorized={false} />
-      <div className={`absolute inset-0 transition duration-500 ${previewing && hasProject ? "opacity-100" : "opacity-0"}`}>
-        {previewing && hasProject ? <TilePortal tile={tile} /> : null}
-      </div>
+      {hasProject ? <TilePortal tile={tile} /> : <TileArtwork tile={tile} colorized={false} />}
+      {hasProject ? (
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,.14),rgba(255,255,255,0)_38%,rgba(0,0,0,.24))] opacity-80 transition duration-300 group-hover:opacity-35 group-focus-visible:opacity-35" />
+      ) : null}
       <div className="absolute left-0 right-0 top-0 flex items-start justify-between p-3 text-white opacity-0 transition duration-300 group-hover:opacity-100 group-focus-visible:opacity-100">
         <div className="max-w-[78%]">
           <div className="truncate text-[11px] font-bold uppercase tracking-[0.2em] text-white/70">{tile.zoUsername}</div>
@@ -203,7 +201,6 @@ function TileCard({ tile, active, previewing, onSelect, onPreview }: { tile: Til
 export default function FutureOfCollaboration() {
   const tiles = useMemo(() => buildTiles(), []);
   const [selected, setSelected] = useState<Tile>(tiles[0]);
-  const [previewed, setPreviewed] = useState<Tile>(tiles[0]);
   const liveCount = tiles.filter((tile) => tile.status === "live").length;
 
   return (
@@ -254,7 +251,7 @@ export default function FutureOfCollaboration() {
 
           <div className="grid grid-cols-1 gap-px bg-[#151515] sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {tiles.map((tile) => (
-              <TileCard key={tile.id} tile={tile} active={selected.id === tile.id} previewing={previewed.id === tile.id || selected.id === tile.id} onSelect={setSelected} onPreview={setPreviewed} />
+              <TileCard key={tile.id} tile={tile} active={selected.id === tile.id} onSelect={setSelected} />
             ))}
           </div>
 
@@ -272,7 +269,7 @@ export default function FutureOfCollaboration() {
             </div>
             <div className="bg-[#222] p-5 font-mono text-sm leading-6 text-[#bdbdbd] sm:p-7">
               <div className="text-[#00a8ff]">rules</div>
-              <p className="mt-3">The live examples index is now mapped onto the first 30 grid tiles. Idle tiles remain monochrome position colors; hover or select a populated tile to open a portal preview of its deployed Zo Space example.</p>
+              <p className="mt-3">The live examples index is now mapped onto the first 30 grid tiles. Populated tiles mount their portal previews immediately; open tiles remain monochrome position colors until claimed.</p>
               <a className="mt-6 inline-block rounded border border-[#00a8ff] px-3 py-2 text-[#00a8ff] hover:bg-[#00a8ff] hover:text-black" href="/examples">
                 Open live examples index
               </a>
