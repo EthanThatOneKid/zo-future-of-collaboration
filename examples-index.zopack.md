@@ -2,7 +2,7 @@
 format: zopack
 version: "1.0"
 name: examples-index
-description: "Index page for the Future of Collaboration batch-deployed example packs"
+description: "Public index of deployed Future of Collaboration example packs with a link to the collaboration grid."
 author: unknown.zo.computer
 routes: 1
 exported: 2026-05-27
@@ -10,7 +10,7 @@ exported: 2026-05-27
 
 # examples-index
 
-Index page for the Future of Collaboration batch-deployed example packs
+Public index of deployed Future of Collaboration example packs with a link to the collaboration grid.
 
 ## Routes
 
@@ -67,6 +67,12 @@ export default function ExamplesIndex() {
           <p className="max-w-xl text-sm leading-6 text-white/60 lg:justify-self-end">
             Thirty one-route Zo Space packs remapped from attendee homepages to public demo routes. This simulates onboarding: each participant brings a pack, Zo assigns it a stable route, and the wall can point to their deployed work.
           </p>
+          <a
+            href="/future-of-collaboration"
+            className="inline-flex w-fit items-center rounded-full border border-sky-300/40 px-4 py-2 text-sm font-semibold text-sky-200 transition hover:border-sky-200 hover:bg-sky-300 hover:text-slate-950 lg:col-start-2 lg:justify-self-end"
+          >
+            View as collaboration grid {"->"}
+          </a>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">

@@ -2,15 +2,15 @@
 format: zopack
 version: "1.0"
 name: future-of-collaboration
-description: "Zo Future of Collaboration 100-tile prototype"
+description: "Zo Future of Collaboration grid wall connected to the live examples index with portal previews."
 author: etok.zo.computer
-routes: 1
+routes: 2
 exported: 2026-05-27
 ---
 
 # future-of-collaboration
 
-Zo Future of Collaboration 100-tile prototype
+Zo Future of Collaboration grid wall connected to the live examples index with portal previews.
 
 ## Routes
 
@@ -20,6 +20,39 @@ Zo Future of Collaboration 100-tile prototype
 import { useMemo, useState } from "react";
 
 const GRID_SIZE = 100;
+const exampleProjects = [
+  ["ct-144-black-hole", "Black Hole"],
+  ["ct-145-raycasting", "Raycasting"],
+  ["ct-146-raycasting-fps-lite", "Raycasting FPS Lite"],
+  ["ct-155-kaleidoscope", "Kaleidoscope"],
+  ["ct-159-double-pendulum", "Double Pendulum"],
+  ["ct-160-spring-mesh", "Spring Mesh"],
+  ["ct-161-estimating-pi", "Estimating Pi"],
+  ["ct-162-self-avoiding-walk", "Self-Avoiding Walk"],
+  ["ct-163-bezier-curves", "Bezier Curves"],
+  ["ct-164-slitscan", "Slit-Scan"],
+  ["ct-166-ascii-art-lite", "ASCII Art Lite"],
+  ["ct-167-prime-spiral", "Prime Spiral"],
+  ["ct-168-julia-set", "Julia Set"],
+  ["ct-169-pi-in-the-sky", "Pi in the Sky"],
+  ["ct-171-wfc-tiled-lite", "WFC Tiled Lite"],
+  ["ct-174-fractal-tree", "Fractal Tree"],
+  ["ct-176-buffons-needle", "Buffon's Needle"],
+  ["ct-178-climate-spiral", "Climate Spiral"],
+  ["ct-179-wolfram-ca", "Wolfram CA"],
+  ["ct-180-falling-sand", "Falling Sand"],
+  ["ct-181-voronoi-stipple", "Voronoi Stipple"],
+  ["ct-182-apollonian-gasket", "Apollonian Gasket"],
+  ["ct-183-mathematical-marbling", "Mathematical Marbling"],
+  ["ct-184-elastic-collisions", "Elastic Collisions"],
+  ["ct-185-dragon-curve", "Dragon Curve"],
+  ["ct-c1-maurer-rose", "Maurer Rose"],
+  ["ct-c2-collatz", "Collatz"],
+  ["ct-c3-hilbert-curve", "Hilbert Curve"],
+  ["ct-c4-worley-noise", "Worley Noise"],
+  ["ct-c5-marching-squares", "Marching Squares"],
+] as const;
+
 const gradientStops = [
   { stop: 0, color: [238, 222, 180] },
   { stop: 0.28, color: [189, 108, 72] },
@@ -31,11 +64,6 @@ const gradientStops = [
 const names = [
   "Ari", "Mika", "Jo", "Ben", "Tiff", "Jordan", "Anthea", "Noor", "Kai", "Lena",
   "Theo", "Maya", "Ezra", "Iris", "Nico", "Sage", "Remy", "June", "Milo", "Zara",
-];
-
-const projects = [
-  "Shared Memory Studio", "Prompt Relay", "Neighborhood Cloud", "Agent Loom", "Pair Builder",
-  "Workshop Atlas", "Live Notes Garden", "Remote Lab", "Archive Room", "Skill Forge",
 ];
 
 const navGroups = [
@@ -60,11 +88,6 @@ function colorForPosition(index: number, total: number) {
   return `rgb(${mix(r1, r2, localT)}, ${mix(g1, g2, localT)}, ${mix(b1, b2, localT)})`;
 }
 
-function seededUrl(index: number) {
-  const path = ["collaboration", "cloud", "workspace", "prototype", "gallery"][index % 5];
-  return `https://{{HANDLE}}.zo.space/${path}`;
-}
-
 type Tile = {
   id: number;
   color: string;
@@ -72,21 +95,47 @@ type Tile = {
   ownerName: string;
   projectTitle: string;
   projectUrl: string;
-  status: "live" | "flagged" | "hidden";
+  status: "live" | "flagged" | "hidden" | "empty";
   scene: number;
 };
 
 function buildTiles(): Tile[] {
-  return Array.from({ length: GRID_SIZE }, (_, index) => ({
-    id: index + 1,
-    color: colorForPosition(index, GRID_SIZE),
-    zoUsername: `zo-user-${String(index + 1).padStart(3, "0")}`,
-    ownerName: names[index % names.length],
-    projectTitle: projects[index % projects.length],
-    projectUrl: seededUrl(index),
-    status: index % 31 === 0 ? "flagged" : "live",
-    scene: index % 12,
-  }));
+  return Array.from({ length: GRID_SIZE }, (_, index) => {
+    const project = exampleProjects[index];
+    return {
+      id: index + 1,
+      color: colorForPosition(index, GRID_SIZE),
+      zoUsername: project ? `example-user-${String(index + 1).padStart(3, "0")}` : "unclaimed",
+      ownerName: project ? names[index % names.length] : "Open slot",
+      projectTitle: project ? project[1] : "Available tile",
+      projectUrl: project ? `/examples/${project[0]}` : "https://{{HANDLE}}.zo.space/examples",
+      status: project ? "live" : "empty",
+      scene: index % 12,
+    };
+  });
+}
+
+function TilePortal({ tile, mode = "tile" }: { tile: Tile; mode?: "tile" | "panel" }) {
+  const scale = mode === "tile" ? 0.24 : 0.42;
+  const size = `${100 / scale}%`;
+
+  return (
+    <div className="absolute inset-0 overflow-hidden bg-black">
+      <iframe
+        title={`${tile.projectTitle} portal preview`}
+        src={tile.projectUrl}
+        loading="lazy"
+        className="pointer-events-none absolute left-0 top-0 border-0"
+        style={{
+          width: size,
+          height: size,
+          transform: `scale(${scale})`,
+          transformOrigin: "0 0",
+        }}
+      />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(255,255,255,.12),rgba(0,0,0,.32)_62%,rgba(0,0,0,.7))]" />
+    </div>
+  );
 }
 
 function TileArtwork({ tile, colorized }: { tile: Tile; colorized: boolean }) {
@@ -119,25 +168,29 @@ function TileArtwork({ tile, colorized }: { tile: Tile; colorized: boolean }) {
   );
 }
 
-function TileCard({ tile, active, onSelect }: { tile: Tile; active: boolean; onSelect: (tile: Tile) => void }) {
+function TileCard({ tile, active, previewing, onSelect, onPreview }: { tile: Tile; active: boolean; previewing: boolean; onSelect: (tile: Tile) => void; onPreview: (tile: Tile) => void }) {
+  const hasProject = tile.status !== "empty";
+
   return (
     <button
       type="button"
       onClick={() => onSelect(tile)}
+      onMouseEnter={() => onPreview(tile)}
+      onFocus={() => onPreview(tile)}
       className={`group relative h-[156px] overflow-hidden bg-neutral-900 text-left outline-none transition duration-200 hover:z-10 hover:scale-[1.025] focus-visible:z-10 focus-visible:scale-[1.025] focus-visible:ring-2 focus-visible:ring-[#00a8ff] sm:h-[180px] ${active ? "z-10 ring-2 ring-[#00a8ff]" : ""}`}
       aria-label={`Tile ${tile.id}: ${tile.projectTitle} by ${tile.ownerName}`}
     >
-      <TileArtwork tile={tile} colorized={active} />
-      <div className="absolute inset-0 opacity-0 transition duration-300 group-hover:opacity-100 group-focus-visible:opacity-100">
-        <TileArtwork tile={tile} colorized />
+      <TileArtwork tile={tile} colorized={false} />
+      <div className={`absolute inset-0 transition duration-500 ${previewing && hasProject ? "opacity-100" : "opacity-0"}`}>
+        {previewing && hasProject ? <TilePortal tile={tile} /> : null}
       </div>
       <div className="absolute left-0 right-0 top-0 flex items-start justify-between p-3 text-white opacity-0 transition duration-300 group-hover:opacity-100 group-focus-visible:opacity-100">
         <div className="max-w-[78%]">
           <div className="truncate text-[11px] font-bold uppercase tracking-[0.2em] text-white/70">{tile.zoUsername}</div>
           <div className="mt-1 truncate text-lg font-black tracking-[-0.04em] drop-shadow">{tile.projectTitle}</div>
         </div>
-        {tile.status === "flagged" ? (
-          <span className="rounded bg-black/65 px-1.5 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-[#ffd166]">AI</span>
+        {tile.status === "empty" ? (
+          <span className="rounded bg-black/65 px-1.5 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-white/70">open</span>
         ) : null}
       </div>
       <span className="absolute bottom-2 right-2 rounded-sm bg-black/45 px-1.5 py-0.5 font-mono text-[10px] font-bold text-white/90 backdrop-blur-sm">
@@ -150,8 +203,8 @@ function TileCard({ tile, active, onSelect }: { tile: Tile; active: boolean; onS
 export default function FutureOfCollaboration() {
   const tiles = useMemo(() => buildTiles(), []);
   const [selected, setSelected] = useState<Tile>(tiles[0]);
+  const [previewed, setPreviewed] = useState<Tile>(tiles[0]);
   const liveCount = tiles.filter((tile) => tile.status === "live").length;
-  const flaggedCount = tiles.filter((tile) => tile.status === "flagged").length;
 
   return (
     <main className="min-h-screen bg-[#202020] text-[#d7d7d7]">
@@ -189,38 +242,129 @@ export default function FutureOfCollaboration() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#00a8ff]">Future of Collaboration</p>
-                <h1 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white sm:text-4xl">One tile per Zo user.</h1>
+                <h1 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white sm:text-4xl">Examples index as a 100-tile wall.</h1>
               </div>
               <div className="grid grid-cols-3 gap-px overflow-hidden rounded border border-white/10 bg-white/10 font-mono text-xs uppercase tracking-[0.16em] text-white/60">
                 <div className="bg-[#252525] px-4 py-2"><b className="text-lg text-white">100</b><br />tiles</div>
-                <div className="bg-[#252525] px-4 py-2"><b className="text-lg text-white">{liveCount}</b><br />live</div>
-                <div className="bg-[#252525] px-4 py-2"><b className="text-lg text-[#ffd166]">{flaggedCount}</b><br />flags</div>
+                <div className="bg-[#252525] px-4 py-2"><b className="text-lg text-white">{liveCount}</b><br />examples</div>
+                <div className="bg-[#252525] px-4 py-2"><b className="text-lg text-[#ffd166]">{GRID_SIZE - liveCount}</b><br />open</div>
               </div>
             </div>
           </header>
 
           <div className="grid grid-cols-1 gap-px bg-[#151515] sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {tiles.map((tile) => (
-              <TileCard key={tile.id} tile={tile} active={selected.id === tile.id} onSelect={setSelected} />
+              <TileCard key={tile.id} tile={tile} active={selected.id === tile.id} previewing={previewed.id === tile.id || selected.id === tile.id} onSelect={setSelected} onPreview={setPreviewed} />
             ))}
           </div>
 
-          <footer className="grid gap-px bg-[#151515] md:grid-cols-[1.2fr_.8fr]">
-            <div className="bg-[#222] p-5 sm:p-7">
-              <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#00a8ff]">Selected Tile</p>
-              <h2 className="mt-3 text-4xl font-black tracking-[-0.05em] text-white">#{selected.id} {selected.projectTitle}</h2>
-              <p className="mt-2 text-[#bdbdbd]">{selected.ownerName} · {selected.zoUsername}</p>
-              <a className="mt-4 inline-block break-all font-mono text-sm text-[#00a8ff] hover:text-white" href={selected.projectUrl} target="_blank" rel="noreferrer">
-                {selected.projectUrl}
-              </a>
+          <footer className="grid gap-px bg-[#151515] md:grid-cols-[1fr_1fr]">
+            <div className="relative min-h-[420px] overflow-hidden bg-black">
+              {selected.status === "empty" ? <TileArtwork tile={selected} colorized /> : <TilePortal tile={selected} mode="panel" />}
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/80 to-transparent p-5 sm:p-7">
+                <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#00a8ff]">Portal Preview</p>
+                <h2 className="mt-3 text-4xl font-black tracking-[-0.05em] text-white">#{selected.id} {selected.projectTitle}</h2>
+                <p className="mt-2 text-[#bdbdbd]">{selected.ownerName} · {selected.zoUsername}</p>
+                <a className="mt-4 inline-block break-all font-mono text-sm text-[#00a8ff] hover:text-white" href={selected.projectUrl} target="_blank" rel="noreferrer">
+                  {selected.projectUrl}
+                </a>
+              </div>
             </div>
             <div className="bg-[#222] p-5 font-mono text-sm leading-6 text-[#bdbdbd] sm:p-7">
               <div className="text-[#00a8ff]">rules</div>
-              <p className="mt-3">Assigned by central service. Any URL allowed. Monochrome at rest, polychrome on hover or selection. Honesty-policy moderation with async AI flags.</p>
+              <p className="mt-3">The live examples index is now mapped onto the first 30 grid tiles. Idle tiles remain monochrome position colors; hover or select a populated tile to open a portal preview of its deployed Zo Space example.</p>
+              <a className="mt-6 inline-block rounded border border-[#00a8ff] px-3 py-2 text-[#00a8ff] hover:bg-[#00a8ff] hover:text-black" href="/examples">
+                Open live examples index
+              </a>
             </div>
           </footer>
         </section>
       </div>
+    </main>
+  );
+}
+```
+
+### `/examples` (page, public)
+
+```tsx
+const examples = [
+  ["ct-144-black-hole", "Black Hole"],
+  ["ct-145-raycasting", "Raycasting"],
+  ["ct-146-raycasting-fps-lite", "Raycasting FPS Lite"],
+  ["ct-155-kaleidoscope", "Kaleidoscope"],
+  ["ct-159-double-pendulum", "Double Pendulum"],
+  ["ct-160-spring-mesh", "Spring Mesh"],
+  ["ct-161-estimating-pi", "Estimating Pi"],
+  ["ct-162-self-avoiding-walk", "Self-Avoiding Walk"],
+  ["ct-163-bezier-curves", "Bezier Curves"],
+  ["ct-164-slitscan", "Slit-Scan"],
+  ["ct-166-ascii-art-lite", "ASCII Art Lite"],
+  ["ct-167-prime-spiral", "Prime Spiral"],
+  ["ct-168-julia-set", "Julia Set"],
+  ["ct-169-pi-in-the-sky", "Pi in the Sky"],
+  ["ct-171-wfc-tiled-lite", "WFC Tiled Lite"],
+  ["ct-174-fractal-tree", "Fractal Tree"],
+  ["ct-176-buffons-needle", "Buffon's Needle"],
+  ["ct-178-climate-spiral", "Climate Spiral"],
+  ["ct-179-wolfram-ca", "Wolfram CA"],
+  ["ct-180-falling-sand", "Falling Sand"],
+  ["ct-181-voronoi-stipple", "Voronoi Stipple"],
+  ["ct-182-apollonian-gasket", "Apollonian Gasket"],
+  ["ct-183-mathematical-marbling", "Mathematical Marbling"],
+  ["ct-184-elastic-collisions", "Elastic Collisions"],
+  ["ct-185-dragon-curve", "Dragon Curve"],
+  ["ct-c1-maurer-rose", "Maurer Rose"],
+  ["ct-c2-collatz", "Collatz"],
+  ["ct-c3-hilbert-curve", "Hilbert Curve"],
+  ["ct-c4-worley-noise", "Worley Noise"],
+  ["ct-c5-marching-squares", "Marching Squares"],
+] as const;
+
+function colorFor(index: number) {
+  const hue = 205 + index * 7;
+  return `linear-gradient(135deg, hsl(${hue}, 78%, 54%), hsl(${hue + 45}, 82%, 38%))`;
+}
+
+export default function ExamplesIndex() {
+  return (
+    <main className="min-h-screen bg-[#090a0f] text-white">
+      <section className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 py-8 sm:px-8 lg:px-12">
+        <div className="mb-8 grid gap-6 border-b border-white/10 pb-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
+          <div>
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.35em] text-sky-300/80">Zopack batch deploy</p>
+            <h1 className="max-w-4xl text-4xl font-black tracking-tight sm:text-6xl">Future of Collaboration examples</h1>
+          </div>
+          <p className="max-w-xl text-sm leading-6 text-white/60 lg:justify-self-end">
+            Thirty one-route Zo Space packs remapped from attendee homepages to public demo routes. This simulates onboarding: each participant brings a pack, Zo assigns it a stable route, and the wall can point to their deployed work.
+          </p>
+          <a
+            href="/future-of-collaboration"
+            className="inline-flex w-fit items-center rounded-full border border-sky-300/40 px-4 py-2 text-sm font-semibold text-sky-200 transition hover:border-sky-200 hover:bg-sky-300 hover:text-slate-950 lg:col-start-2 lg:justify-self-end"
+          >
+            View as collaboration grid {"->"}
+          </a>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          {examples.map(([slug, title], index) => (
+            <a
+              key={slug}
+              href={`/examples/${slug}`}
+              className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-4 shadow-2xl shadow-black/30 transition duration-300 hover:-translate-y-1 hover:border-white/25 hover:bg-white/[0.06]"
+            >
+              <div className="mb-4 aspect-square rounded-xl opacity-85 ring-1 ring-white/10 transition duration-300 group-hover:opacity-100" style={{ background: colorFor(index) }} />
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <div className="text-xs font-mono text-white/40">{String(index + 1).padStart(2, "0")}</div>
+                  <h2 className="text-base font-semibold leading-tight">{title}</h2>
+                </div>
+                <span className="text-lg text-white/35 transition group-hover:translate-x-1 group-hover:text-white">→</span>
+              </div>
+            </a>
+          ))}
+        </div>
+      </section>
     </main>
   );
 }
