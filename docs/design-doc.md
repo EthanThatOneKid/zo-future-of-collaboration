@@ -40,7 +40,7 @@ A standalone live event app where every Zo user claims a numbered tile, builds o
 4. They create or link their contribution: name, project title, and project link are the required public fields.
 5. The grid updates live.
 6. Idle state and populated resting state show the composed monochrome gradient artwork.
-7. Hover/focus state reveals tile details: name, project title, location, and link.
+7. Hover/focus state transitions the tile from monochromatic color treatment to the original polychromatic project preview.
 8. End state produces a downloadable visual artifact plus a browsable archive of contributions.
 
 ## Core Product Surfaces
@@ -64,12 +64,15 @@ Locked working model:
 - Layout: rectangular grid first; exact aspect ratio can respond to viewport and capacity.
 - Tile identity: one tile represents one Zo user.
 - Assignment: a central SQLite or DuckDB-backed allocator assigns tiles to Zo users.
-- Tile record: each tile has a number, color, Zo user identity, name, project title, project link, status, and moderation state.
+- Onboarding source: the user is onboarded or associated by running a Skill in their Zo, so the user's Zo username is known and can be associated with records in the central service.
+- Tile record: each tile has a number, color, Zo username, name, project title, project link, original preview source, status, and moderation state.
 - Claim timing: claim-first is encouraged; a user can reserve their tile before finishing their Space/project.
+- Project links may point to any URL, not only `zo.space`, because Zo supports custom domains.
 - Idle state: tile appears as its assigned pure gradient color.
 - Populated resting state: tile still appears monochromatic using the same assigned color.
-- Hover/focus state: tile reveals project metadata and link.
+- Hover/focus state: tile transitions from monochromatic to polychromatic original preview.
 - Click state: opens tile detail or linked Zo Space.
+- Tile number: small visible number in the bottom-right corner at rest.
 - Accessibility: keyboard focus must expose the same details as hover.
 
 ### Visual Direction
@@ -78,7 +81,7 @@ Current preferred direction:
 
 - Smooth gradient field inspired by the supplied reference: warm light at one end, passing through reddish/violet mid-tones into blue/teal.
 - Each tile samples its color from its grid position relative to that master gradient.
-- Idle and populated tiles remain monochrome until hover/focus.
+- Idle and populated tiles remain monochrome until hover/focus, then transition to the original polychromatic preview.
 - White or light pixel gutters remain plausible if needed for print clarity.
 - Avoid chaotic random colors.
 - Avoid a corporate-logo output as the final composition.
@@ -90,7 +93,7 @@ Open visual variants:
 - Subtle texture/noise over the monochrome tile, if pure flat color feels too sterile.
 - Color tile with pixel/noise texture.
 - Striped gradient groups rather than strict left-to-right tile order.
-- Browser preview-in-tile via HTML portal-like behavior remains experimental and must not be required for v1.
+- Browser preview-in-tile via HTML portal-like behavior remains experimental. The product requirement is the monochrome-to-polychrome transition, not a specific browser primitive.
 
 ### Merch Workflow
 
@@ -132,12 +135,13 @@ Minimum tile record:
 type Tile = {
   id: number;
   color: string;
-  zoUserId: string;
+  zoUsername: string;
   claimedAt?: string;
   ownerName?: string;
   projectTitle?: string;
   projectUrl?: string;
-  moderationStatus: "pending" | "approved" | "flagged" | "hidden";
+  previewUrl?: string;
+  moderationStatus: "pending" | "flagged" | "approved" | "hidden";
   moderationReason?: string;
 };
 ```
@@ -147,7 +151,7 @@ Minimum claim input:
 - Name.
 - Project title.
 - Project link.
-- Zo user identity from the auth/session layer.
+- Zo username, associated by the user's Skill-run onboarding flow.
 
 ### Live Update Options
 
@@ -159,17 +163,18 @@ Minimum claim input:
 
 - Tile claims must be atomic: two attendees cannot get the same tile.
 - The allocator assigns the next available tile to the Zo user; attendees do not manually choose tiles in v1.
-- Each Zo user gets at most one active tile unless an organizer overrides it.
+- Each Zo username gets at most one active tile unless an organizer overrides it.
 - Organizers need a reset/unclaim tool for mistakes.
 - The system needs a manual override in case someone cannot complete the form.
 
 ### Moderation Requirements
 
 - AI reviews submitted names, project titles, and links.
-- AI should approve ordinary submissions automatically and surface only likely issues to the human monitor.
-- Human moderation should be an alert queue, not a constant manual review bottleneck.
-- Moderation states must support `pending`, `approved`, `flagged`, and `hidden`.
-- The live display should degrade gracefully if moderation is delayed: show claimed monochrome tile first, reveal details only after approval if needed.
+- Submitted public details are blocked from reveal until approved.
+- AI triages submissions and surfaces alerts to a human moderator.
+- Human approval is required before a tile can reveal its polychromatic preview and public details.
+- Moderation states must support `pending`, `flagged`, `approved`, and `hidden`.
+- The live display should degrade gracefully while moderation is pending: show the claimed monochrome tile and number, but do not reveal public details or original preview until approval.
 
 ### Export Requirements
 
@@ -210,23 +215,22 @@ Minimum claim input:
 - Users do not understand what to submit.
 - Tile claiming creates duplicates or stuck claims.
 - Live grid feels visually underwhelming until enough people join.
-- AI moderation either flags too much, misses obviously bad content, or introduces latency.
+- AI moderation either flags too much, misses obviously bad content, or creates a human approval backlog.
 - Merch workflow overwhelms print operator.
 - Toronto and New York drift out of sync operationally.
 - The experience becomes a form-fill instead of a memorable collaborative act.
 
 ## Critical Decisions To Make Next
 
-1. What is the exact Zo user identity source available to the standalone app?
-2. Should the app require Zo login, or can a facilitator create/attach a tile for someone?
-3. Should project links be restricted to Zo Space/Zo-hosted URLs, or can they be any URL?
-4. Does the hover reveal open an iframe/portal-like preview, a screenshot thumbnail, or a metadata card only?
+1. What exactly does the attendee-run Skill send to the central service: username only, signed identity proof, or username plus project metadata?
+2. How do we prevent someone from spoofing another Zo username in the central service?
+3. Should a facilitator be able to create/attach a tile for someone who cannot run the Skill?
+4. How do we generate or capture the original polychromatic preview for arbitrary URLs, including custom domains?
 5. What is the exact visual gradient: image-sampled reference, hand-picked stops, or generated palette?
-6. Should tile numbers be visible at rest, only on hover, or hidden from public view?
-7. What is the SLA for AI moderation: instant block, delayed alert, or post-hoc cleanup?
-8. What does demo mode need to simulate: 100 populated tiles, live arrivals, hover details, or all of the above?
-9. Who gets admin access, and what can they edit/reset/hide during the event?
-10. What must be ready for the next Zo team pressure test?
+6. How fast does human approval need to be during the live event, and who is the named approver?
+7. What does demo mode need to simulate: 100 populated tiles, live arrivals, hover details, moderation flow, or all of the above?
+8. Who gets admin access, and what can they edit/reset/hide during the event?
+9. What must be ready for the next Zo team pressure test?
 
 ## Draft Milestones
 
@@ -242,7 +246,7 @@ Minimum claim input:
 
 - Static grid with deterministic palette.
 - Claim form with mock data.
-- Hover/focus detail reveal.
+- Hover/focus monochrome-to-polychrome transition.
 - Export screenshot/proof of final artwork direction.
 - Demo mode with 100 seeded users/projects.
 
@@ -252,7 +256,7 @@ Minimum claim input:
 - Atomic tile claims.
 - Real-time updates with polling fallback.
 - Admin reset/export controls.
-- AI moderation alert queue.
+- AI moderation alert queue with human approval gate.
 
 ### Milestone 3: Event Readiness
 
