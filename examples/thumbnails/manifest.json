@@ -1,0 +1,313 @@
+{
+  "generatedAt": "2026-05-30T02:05:10.932Z",
+  "routeBase": "https://etok.zo.space/examples",
+  "thumbnailSize": {
+    "width": 640,
+    "height": 400
+  },
+  "count": 30,
+  "failureCount": 0,
+  "examples": [
+    {
+      "slug": "ct-144-black-hole",
+      "name": "ct-144-black-hole",
+      "description": "Black hole gravitational lensing (Coding Train #144)",
+      "sourcePack": "examples/ct-144-black-hole.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-144-black-hole",
+      "thumbnail": "examples/thumbnails/ct-144-black-hole.webp",
+      "status": "captured",
+      "captureMs": 6096
+    },
+    {
+      "slug": "ct-145-raycasting",
+      "name": "ct-145-raycasting",
+      "description": "2D ray casting with wall shadows and FOV (Coding Train #145)",
+      "sourcePack": "examples/ct-145-raycasting.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-145-raycasting",
+      "thumbnail": "examples/thumbnails/ct-145-raycasting.webp",
+      "status": "captured",
+      "captureMs": 5887
+    },
+    {
+      "slug": "ct-146-raycasting-fps-lite",
+      "name": "ct-146-raycasting-fps-lite",
+      "description": "First-person raycasting lite (Coding Train #146)",
+      "sourcePack": "examples/ct-146-raycasting-fps-lite.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-146-raycasting-fps-lite",
+      "thumbnail": "examples/thumbnails/ct-146-raycasting-fps-lite.webp",
+      "status": "captured",
+      "captureMs": 5746
+    },
+    {
+      "slug": "ct-155-kaleidoscope",
+      "name": "ct-155-kaleidoscope",
+      "description": "Kaleidoscope symmetric painting (Coding Train #155)",
+      "sourcePack": "examples/ct-155-kaleidoscope.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-155-kaleidoscope",
+      "thumbnail": "examples/thumbnails/ct-155-kaleidoscope.webp",
+      "status": "captured",
+      "captureMs": 5581
+    },
+    {
+      "slug": "ct-159-double-pendulum",
+      "name": "ct-159-double-pendulum",
+      "description": "Chaotic double pendulum (Coding Train #159)",
+      "sourcePack": "examples/ct-159-double-pendulum.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-159-double-pendulum",
+      "thumbnail": "examples/thumbnails/ct-159-double-pendulum.webp",
+      "status": "captured",
+      "captureMs": 5727
+    },
+    {
+      "slug": "ct-160-spring-mesh",
+      "name": "ct-160-spring-mesh",
+      "description": "Spring force mesh (Coding Train #160)",
+      "sourcePack": "examples/ct-160-spring-mesh.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-160-spring-mesh",
+      "thumbnail": "examples/thumbnails/ct-160-spring-mesh.webp",
+      "status": "captured",
+      "captureMs": 5671
+    },
+    {
+      "slug": "ct-161-estimating-pi",
+      "name": "ct-161-estimating-pi",
+      "description": "Estimate pi via coprime random pairs (Coding Train #161)",
+      "sourcePack": "examples/ct-161-estimating-pi.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-161-estimating-pi",
+      "thumbnail": "examples/thumbnails/ct-161-estimating-pi.webp",
+      "status": "captured",
+      "captureMs": 5348
+    },
+    {
+      "slug": "ct-162-self-avoiding-walk",
+      "name": "ct-162-self-avoiding-walk",
+      "description": "Self-avoiding random walk (Coding Train #162)",
+      "sourcePack": "examples/ct-162-self-avoiding-walk.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-162-self-avoiding-walk",
+      "thumbnail": "examples/thumbnails/ct-162-self-avoiding-walk.webp",
+      "status": "captured",
+      "captureMs": 5875
+    },
+    {
+      "slug": "ct-163-bezier-curves",
+      "name": "ct-163-bezier-curves",
+      "description": "Interactive cubic Bezier curves (Coding Train #163)",
+      "sourcePack": "examples/ct-163-bezier-curves.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-163-bezier-curves",
+      "thumbnail": "examples/thumbnails/ct-163-bezier-curves.webp",
+      "status": "captured",
+      "captureMs": 5342
+    },
+    {
+      "slug": "ct-164-slitscan",
+      "name": "ct-164-slitscan",
+      "description": "Slit-scan time displacement effect (Coding Train #164)",
+      "sourcePack": "examples/ct-164-slitscan.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-164-slitscan",
+      "thumbnail": "examples/thumbnails/ct-164-slitscan.webp",
+      "status": "captured",
+      "captureMs": 5706
+    },
+    {
+      "slug": "ct-166-ascii-art-lite",
+      "name": "ct-166-ascii-art-lite",
+      "description": "ASCII art from procedural gradient (Coding Train #166)",
+      "sourcePack": "examples/ct-166-ascii-art-lite.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-166-ascii-art-lite",
+      "thumbnail": "examples/thumbnails/ct-166-ascii-art-lite.webp",
+      "status": "captured",
+      "captureMs": 5345
+    },
+    {
+      "slug": "ct-167-prime-spiral",
+      "name": "ct-167-prime-spiral",
+      "description": "Ulam prime spiral with pan and zoom (Coding Train #167)",
+      "sourcePack": "examples/ct-167-prime-spiral.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-167-prime-spiral",
+      "thumbnail": "examples/thumbnails/ct-167-prime-spiral.webp",
+      "status": "captured",
+      "captureMs": 5381
+    },
+    {
+      "slug": "ct-168-julia-set",
+      "name": "ct-168-julia-set",
+      "description": "Julia set pan and zoom — 2D fractal (Coding Train #168)",
+      "sourcePack": "examples/ct-168-julia-set.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-168-julia-set",
+      "thumbnail": "examples/thumbnails/ct-168-julia-set.webp",
+      "status": "captured",
+      "captureMs": 5358
+    },
+    {
+      "slug": "ct-169-pi-in-the-sky",
+      "name": "ct-169-pi-in-the-sky",
+      "description": "Catch falling pi digits (Coding Train #169)",
+      "sourcePack": "examples/ct-169-pi-in-the-sky.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-169-pi-in-the-sky",
+      "thumbnail": "examples/thumbnails/ct-169-pi-in-the-sky.webp",
+      "status": "captured",
+      "captureMs": 5842
+    },
+    {
+      "slug": "ct-171-wfc-tiled-lite",
+      "name": "ct-171-wfc-tiled-lite",
+      "description": "Wave Function Collapse tiled lite (Coding Train #171)",
+      "sourcePack": "examples/ct-171-wfc-tiled-lite.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-171-wfc-tiled-lite",
+      "thumbnail": "examples/thumbnails/ct-171-wfc-tiled-lite.webp",
+      "status": "captured-with-chrome-fallback",
+      "captureMs": 26484
+    },
+    {
+      "slug": "ct-174-fractal-tree",
+      "name": "ct-174-fractal-tree",
+      "description": "Animated fractal tree with wind (Coding Train #174)",
+      "sourcePack": "examples/ct-174-fractal-tree.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-174-fractal-tree",
+      "thumbnail": "examples/thumbnails/ct-174-fractal-tree.webp",
+      "status": "captured",
+      "captureMs": 9427
+    },
+    {
+      "slug": "ct-176-buffons-needle",
+      "name": "ct-176-buffons-needle",
+      "description": "Buffon's needle pi estimation (Coding Train #176)",
+      "sourcePack": "examples/ct-176-buffons-needle.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-176-buffons-needle",
+      "thumbnail": "examples/thumbnails/ct-176-buffons-needle.webp",
+      "status": "captured",
+      "captureMs": 5401
+    },
+    {
+      "slug": "ct-178-climate-spiral",
+      "name": "ct-178-climate-spiral",
+      "description": "Hawkins climate spiral — temperature anomalies (Coding Train #178)",
+      "sourcePack": "examples/ct-178-climate-spiral.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-178-climate-spiral",
+      "thumbnail": "examples/thumbnails/ct-178-climate-spiral.webp",
+      "status": "captured",
+      "captureMs": 5100
+    },
+    {
+      "slug": "ct-179-wolfram-ca",
+      "name": "ct-179-wolfram-ca",
+      "description": "Elementary cellular automaton — Wolfram rules (Coding Train #179)",
+      "sourcePack": "examples/ct-179-wolfram-ca.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-179-wolfram-ca",
+      "thumbnail": "examples/thumbnails/ct-179-wolfram-ca.webp",
+      "status": "captured",
+      "captureMs": 5631
+    },
+    {
+      "slug": "ct-180-falling-sand",
+      "name": "ct-180-falling-sand",
+      "description": "Falling sand pixel physics — sand, water, stone (Coding Train #180)",
+      "sourcePack": "examples/ct-180-falling-sand.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-180-falling-sand",
+      "thumbnail": "examples/thumbnails/ct-180-falling-sand.webp",
+      "status": "captured",
+      "captureMs": 5377
+    },
+    {
+      "slug": "ct-181-voronoi-stipple",
+      "name": "ct-181-voronoi-stipple",
+      "description": "Voronoi stippling lite — Lloyd relaxation dots (Coding Train #181)",
+      "sourcePack": "examples/ct-181-voronoi-stipple.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-181-voronoi-stipple",
+      "thumbnail": "examples/thumbnails/ct-181-voronoi-stipple.webp",
+      "status": "captured",
+      "captureMs": 5605
+    },
+    {
+      "slug": "ct-182-apollonian-gasket",
+      "name": "ct-182-apollonian-gasket",
+      "description": "Apollonian circle gasket (Coding Train #182)",
+      "sourcePack": "examples/ct-182-apollonian-gasket.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-182-apollonian-gasket",
+      "thumbnail": "examples/thumbnails/ct-182-apollonian-gasket.webp",
+      "status": "captured",
+      "captureMs": 5308
+    },
+    {
+      "slug": "ct-183-mathematical-marbling",
+      "name": "ct-183-mathematical-marbling",
+      "description": "Mathematical paper marbling — ink drops and swirl (Coding Train #183)",
+      "sourcePack": "examples/ct-183-mathematical-marbling.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-183-mathematical-marbling",
+      "thumbnail": "examples/thumbnails/ct-183-mathematical-marbling.webp",
+      "status": "captured",
+      "captureMs": 5887
+    },
+    {
+      "slug": "ct-184-elastic-collisions",
+      "name": "ct-184-elastic-collisions",
+      "description": "Elastic circle collisions (Coding Train #184)",
+      "sourcePack": "examples/ct-184-elastic-collisions.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-184-elastic-collisions",
+      "thumbnail": "examples/thumbnails/ct-184-elastic-collisions.webp",
+      "status": "captured",
+      "captureMs": 5828
+    },
+    {
+      "slug": "ct-185-dragon-curve",
+      "name": "ct-185-dragon-curve",
+      "description": "Animated dragon curve fractal unfold (Coding Train #185)",
+      "sourcePack": "examples/ct-185-dragon-curve.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-185-dragon-curve",
+      "thumbnail": "examples/thumbnails/ct-185-dragon-curve.webp",
+      "status": "captured",
+      "captureMs": 5397
+    },
+    {
+      "slug": "ct-c1-maurer-rose",
+      "name": "ct-c1-maurer-rose",
+      "description": "Maurer rose parametric curve (Coding in the Cabana C1)",
+      "sourcePack": "examples/ct-c1-maurer-rose.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-c1-maurer-rose",
+      "thumbnail": "examples/thumbnails/ct-c1-maurer-rose.webp",
+      "status": "captured",
+      "captureMs": 5650
+    },
+    {
+      "slug": "ct-c2-collatz",
+      "name": "ct-c2-collatz",
+      "description": "Collatz conjecture visualization (Coding in the Cabana C2)",
+      "sourcePack": "examples/ct-c2-collatz.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-c2-collatz",
+      "thumbnail": "examples/thumbnails/ct-c2-collatz.webp",
+      "status": "captured",
+      "captureMs": 5731
+    },
+    {
+      "slug": "ct-c3-hilbert-curve",
+      "name": "ct-c3-hilbert-curve",
+      "description": "Animated Hilbert space-filling curve (Coding in the Cabana C3)",
+      "sourcePack": "examples/ct-c3-hilbert-curve.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-c3-hilbert-curve",
+      "thumbnail": "examples/thumbnails/ct-c3-hilbert-curve.webp",
+      "status": "captured",
+      "captureMs": 5381
+    },
+    {
+      "slug": "ct-c4-worley-noise",
+      "name": "ct-c4-worley-noise",
+      "description": "Worley noise F1-F2 cellular texture (Coding in the Cabana C4)",
+      "sourcePack": "examples/ct-c4-worley-noise.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-c4-worley-noise",
+      "thumbnail": "examples/thumbnails/ct-c4-worley-noise.webp",
+      "status": "captured",
+      "captureMs": 5990
+    },
+    {
+      "slug": "ct-c5-marching-squares",
+      "name": "ct-c5-marching-squares",
+      "description": "Marching squares contour noise (Coding in the Cabana C5)",
+      "sourcePack": "examples/ct-c5-marching-squares.zopack.md",
+      "routeUrl": "https://etok.zo.space/examples/ct-c5-marching-squares",
+      "thumbnail": "examples/thumbnails/ct-c5-marching-squares.webp",
+      "status": "captured",
+      "captureMs": 5278
+    }
+  ],
+  "failures": []
+}
