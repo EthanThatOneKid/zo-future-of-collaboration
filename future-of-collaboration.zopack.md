@@ -96,6 +96,12 @@ function clampGridSize(value: number) {
   return Math.max(MIN_GRID_SIZE, Math.min(MAX_GRID_SIZE, value));
 }
 
+function isTruthyQueryValue(value: string | null) {
+  if (value === null) return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === "" || normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
+
 type Tile = {
   id: number;
   color: string;
@@ -244,6 +250,7 @@ export default function FutureOfCollaboration() {
 
 function FutureOfCollaborationContent() {
   const [gridSize, setGridSize] = useState(DEFAULT_GRID_SIZE);
+  const [debugMode, setDebugMode] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -252,6 +259,7 @@ function FutureOfCollaborationContent() {
     if (Number.isFinite(parsed)) {
       setGridSize(clampGridSize(parsed));
     }
+    setDebugMode(isTruthyQueryValue(params.get("debug")));
   }, []);
 
   useEffect(() => {
@@ -338,50 +346,33 @@ function FutureOfCollaborationContent() {
                   Future of Collaboration
                 </span>
               </h1>
-              <div className="grid gap-3 rounded border border-white/10 bg-[#252525] p-3 font-mono text-xs uppercase tracking-[0.16em] text-white/60 sm:min-w-[320px]">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <div className="text-[10px] tracking-[0.22em] text-white/45">tiles</div>
-                    <div className="mt-1 text-lg font-black text-white">{gridSize}</div>
-                  </div>
-                  <label className="text-right">
-                    <span className="block text-[10px] tracking-[0.22em] text-white/45">query</span>
-                    <code className="mt-1 block rounded border border-white/10 bg-black/30 px-2 py-1 text-[11px] text-[#00a8ff]">?tiles={gridSize}</code>
+              {debugMode ? (
+                <div className="grid gap-3 rounded border border-white/10 bg-[#252525] p-3 font-mono text-xs uppercase tracking-[0.16em] text-white/60 sm:min-w-[320px]">
+                  <label className="grid gap-1">
+                    <span className="text-[10px] tracking-[0.22em] text-white/40">Tile count</span>
+                    <input
+                      type="range"
+                      min={MIN_GRID_SIZE}
+                      max={MAX_GRID_SIZE}
+                      value={gridSize}
+                      onChange={(event) => setGridSize(clampGridSize(Number(event.target.value)))}
+                      className="h-2 w-full cursor-pointer accent-[#00a8ff]"
+                    />
                   </label>
+                  <label className="grid gap-1">
+                    <span className="text-[10px] tracking-[0.22em] text-white/40">Debug mode</span>
+                    <input
+                      type="checkbox"
+                      checked={debugMode}
+                      onChange={(event) => setDebugMode(event.target.checked)}
+                      className="h-4 w-4 accent-[#00a8ff]"
+                    />
+                  </label>
+                  <div className="text-[10px] tracking-[0.22em] text-white/40">
+                    cache: {lruIds.length} / {MAX_MOUNTED_PORTALS} mounted
+                  </div>
                 </div>
-                <input
-                  type="range"
-                  min={MIN_GRID_SIZE}
-                  max={MAX_GRID_SIZE}
-                  value={gridSize}
-                  onChange={(event) => setGridSize(clampGridSize(Number(event.target.value)))}
-                  className="h-2 w-full cursor-pointer accent-[#00a8ff]"
-                  aria-label="Number of displayed tiles"
-                />
-                <div className="flex items-center gap-3">
-                  <label className="text-[10px] tracking-[0.22em] text-white/45">max visible</label>
-                  <input
-                    type="number"
-                    min={MIN_GRID_SIZE}
-                    max={MAX_GRID_SIZE}
-                    value={gridSize}
-                    onChange={(event) => setGridSize(clampGridSize(Number(event.target.value || DEFAULT_GRID_SIZE)))}
-                    className="w-24 rounded border border-white/10 bg-black/30 px-2 py-1 text-sm text-white outline-none ring-0 [appearance:textfield] focus:border-[#00a8ff]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setGridSize(DEFAULT_GRID_SIZE)}
-                    className="rounded border border-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-white/70 transition hover:border-[#00a8ff] hover:text-[#00a8ff]"
-                  >
-                    reset
-                  </button>
-                </div>
-                <div className="grid grid-cols-3 gap-px overflow-hidden rounded border border-white/10 bg-white/10">
-                  <div className="bg-[#252525] px-4 py-2"><b className="text-lg text-white">{liveCount}</b><br />examples</div>
-                  <div className="bg-[#252525] px-4 py-2"><b className="text-lg text-[#ffd166]">{gridSize - liveCount}</b><br />open</div>
-                  <div className="bg-[#252525] px-4 py-2"><b className="text-lg text-white">url</b><br />sync</div>
-                </div>
-              </div>
+              ) : null}
             </div>
           </header>
 
