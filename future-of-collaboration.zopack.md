@@ -330,7 +330,14 @@ function FutureOfCollaborationContent() {
         <section className="min-w-0">
           <header className="sticky top-0 z-20 border-b border-black/30 bg-[#202020]/90 px-4 py-3 backdrop-blur sm:px-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h1 className="max-w-3xl text-3xl font-black tracking-[-0.06em] text-white sm:text-5xl">Future of Collaboration</h1>
+              <h1 className="max-w-3xl leading-none">
+                <span className="block font-mono text-[11px] uppercase tracking-[0.42em] text-[#2ca7ff] drop-shadow-[0_0_10px_rgba(42,167,255,0.65)] sm:text-[12px]">
+                  Future of Collaboration
+                </span>
+                <span className="mt-3 block font-mono text-3xl font-normal uppercase tracking-[0.22em] text-[#2ca7ff] drop-shadow-[0_0_12px_rgba(42,167,255,0.8)] sm:text-5xl">
+                  Future of Collaboration
+                </span>
+              </h1>
               <div className="grid gap-3 rounded border border-white/10 bg-[#252525] p-3 font-mono text-xs uppercase tracking-[0.16em] text-white/60 sm:min-w-[320px]">
                 <div className="flex items-center justify-between gap-4">
                   <div>
