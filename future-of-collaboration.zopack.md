@@ -148,7 +148,7 @@ function TileCard({
   onHover: (tile: Tile | null) => void;
 }) {
   const hasProject = tile.status !== "empty";
-  const className = `group relative h-[156px] overflow-hidden bg-neutral-900 text-left outline-none transition duration-200 hover:z-10 hover:scale-[1.025] focus-visible:z-10 focus-visible:scale-[1.025] focus-visible:ring-2 focus-visible:ring-[#00a8ff] sm:h-[180px]`;
+  const className = `group isolate relative h-[156px] overflow-hidden bg-neutral-900 text-left outline-none transition duration-200 hover:z-10 hover:scale-[1.025] focus-visible:z-10 focus-visible:scale-[1.025] focus-visible:ring-2 focus-visible:ring-[#00a8ff] sm:h-[180px]`;
   const Inner = (
     <>
       {hasProject ? (
@@ -157,9 +157,18 @@ function TileCard({
             className="absolute inset-0 bg-cover bg-center transition-opacity duration-300 ease-out"
             style={{
               backgroundImage: `url(${tile.thumbnailUrl})`,
-              filter: "saturate(.5) contrast(.95)",
+              filter: "grayscale(1) saturate(.15) contrast(.96) brightness(.95)",
               opacity: hover ? 0 : 1,
             }}
+          />
+          <div
+            className="absolute inset-0 transition-opacity duration-300 ease-out"
+            style={{
+              backgroundColor: tile.color,
+              mixBlendMode: "color",
+              opacity: hover ? 0 : 0.9,
+            }}
+            aria-hidden="true"
           />
           {mounted ? (
             <div
@@ -358,4 +367,3 @@ export default function FutureOfCollaboration() {
 | Placeholder | Description |
 |---|---|
 | `{{HANDLE}}` | Your zo.space handle (replaces `etok`) |
-
