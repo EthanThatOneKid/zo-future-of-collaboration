@@ -17,9 +17,7 @@ exported: 2026-06-02
 ### `/future-of-collaboration` (page, public)
 
 ```tsx
-import { Suspense, useMemo, useState } from "react";
-import { NuqsAdapter } from "https://esm.sh/nuqs@2.6.0/adapters/react";
-import { parseAsInteger, useQueryState } from "https://esm.sh/nuqs@2.6.0";
+import { useEffect, useMemo, useState } from "react";
 
 const DEFAULT_GRID_SIZE = 100;
 const MIN_GRID_SIZE = 1;
@@ -241,21 +239,34 @@ function TileCard({
 }
 
 export default function FutureOfCollaboration() {
-  return (
-    <NuqsAdapter>
-      <Suspense fallback={<div className="min-h-screen bg-[#202020]" />}>
-        <FutureOfCollaborationContent />
-      </Suspense>
-    </NuqsAdapter>
-  );
+  return <FutureOfCollaborationContent />;
 }
 
 function FutureOfCollaborationContent() {
-  const [gridCount, setGridCount] = useQueryState(
-    "tiles",
-    parseAsInteger.withDefault(DEFAULT_GRID_SIZE),
-  );
-  const gridSize = clampGridSize(gridCount);
+  const [gridSize, setGridSize] = useState(DEFAULT_GRID_SIZE);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const parsed = Number(params.get("tiles") ?? DEFAULT_GRID_SIZE);
+    if (Number.isFinite(parsed)) {
+      setGridSize(clampGridSize(parsed));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (gridSize === DEFAULT_GRID_SIZE) {
+      params.delete("tiles");
+    } else {
+      params.set("tiles", String(gridSize));
+    }
+    const search = params.toString();
+    const nextUrl = `${window.location.pathname}${search ? `?${search}` : ""}${window.location.hash}`;
+    window.history.replaceState(null, "", nextUrl);
+  }, [gridSize]);
+
   const tiles = useMemo(() => buildTiles(gridSize), [gridSize]);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   const [lruIds, setLruIds] = useState<number[]>([]);
@@ -333,7 +344,7 @@ function FutureOfCollaborationContent() {
                   min={MIN_GRID_SIZE}
                   max={MAX_GRID_SIZE}
                   value={gridSize}
-                  onChange={(event) => setGridCount(clampGridSize(Number(event.target.value)))}
+                  onChange={(event) => setGridSize(clampGridSize(Number(event.target.value)))}
                   className="h-2 w-full cursor-pointer accent-[#00a8ff]"
                   aria-label="Number of displayed tiles"
                 />
@@ -344,12 +355,12 @@ function FutureOfCollaborationContent() {
                     min={MIN_GRID_SIZE}
                     max={MAX_GRID_SIZE}
                     value={gridSize}
-                    onChange={(event) => setGridCount(clampGridSize(Number(event.target.value || DEFAULT_GRID_SIZE)))}
+                    onChange={(event) => setGridSize(clampGridSize(Number(event.target.value || DEFAULT_GRID_SIZE)))}
                     className="w-24 rounded border border-white/10 bg-black/30 px-2 py-1 text-sm text-white outline-none ring-0 [appearance:textfield] focus:border-[#00a8ff]"
                   />
                   <button
                     type="button"
-                    onClick={() => setGridCount(DEFAULT_GRID_SIZE)}
+                    onClick={() => setGridSize(DEFAULT_GRID_SIZE)}
                     className="rounded border border-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-white/70 transition hover:border-[#00a8ff] hover:text-[#00a8ff]"
                   >
                     reset
