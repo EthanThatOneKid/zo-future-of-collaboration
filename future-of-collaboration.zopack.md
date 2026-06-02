@@ -324,10 +324,7 @@ function FutureOfCollaborationContent() {
         <section className="min-w-0">
           <header className="sticky top-0 z-20 border-b border-black/30 bg-[#202020]/90 px-4 py-3 backdrop-blur sm:px-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#00a8ff]">Future of Collaboration</p>
-                <h1 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white sm:text-4xl">Examples index as a {gridSize}-tile wall.</h1>
-              </div>
+              <h1 className="text-2xl font-black tracking-[-0.04em] text-white sm:text-4xl">Future of Collaboration</h1>
               <div className="grid gap-3 rounded border border-white/10 bg-[#252525] p-3 font-mono text-xs uppercase tracking-[0.16em] text-white/60 sm:min-w-[320px]">
                 <div className="flex items-center justify-between gap-4">
                   <div>
