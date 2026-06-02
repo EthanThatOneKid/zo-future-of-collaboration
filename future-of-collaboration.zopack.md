@@ -71,7 +71,7 @@ const names = [
 ];
 
 const navGroups = [
-  { label: "Event", items: ["overview", "live grid", "claims", "demo mode"] },
+  { label: "Event", items: ["overview", "live grid", "claims", "demo mode", "event info"] },
   { label: "Build", items: ["skills", "api", "sqlite", "moderation"] },
   { label: "Community", items: ["attendees", "projects", "partners", "export"] },
   { label: "Code", items: ["github", "docs", "deploy"] },
@@ -308,9 +308,15 @@ function FutureOfCollaborationContent() {
                 {group.items.map((item) => (
                   <a
                     key={item}
-                    href={item === "github" ? "https://github.com/EthanThatOneKid/zo-future-of-collaboration" : "/examples"}
-                    target={item === "github" ? "_blank" : undefined}
-                    rel={item === "github" ? "noreferrer" : undefined}
+                    href={
+                      item === "github"
+                        ? "https://github.com/EthanThatOneKid/zo-future-of-collaboration"
+                        : item === "event info"
+                          ? "https://luma.com/zo-9dxy?tk=sQALRz"
+                          : "/examples"
+                    }
+                    target={item === "github" || item === "event info" ? "_blank" : undefined}
+                    rel={item === "github" || item === "event info" ? "noreferrer" : undefined}
                     className="block text-left text-[#bdbdbd] transition hover:text-white"
                   >
                     {item}
@@ -324,7 +330,7 @@ function FutureOfCollaborationContent() {
         <section className="min-w-0">
           <header className="sticky top-0 z-20 border-b border-black/30 bg-[#202020]/90 px-4 py-3 backdrop-blur sm:px-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h1 className="text-2xl font-black tracking-[-0.04em] text-white sm:text-4xl">Future of Collaboration</h1>
+              <h1 className="max-w-3xl text-3xl font-black tracking-[-0.06em] text-white sm:text-5xl">Future of Collaboration</h1>
               <div className="grid gap-3 rounded border border-white/10 bg-[#252525] p-3 font-mono text-xs uppercase tracking-[0.16em] text-white/60 sm:min-w-[320px]">
                 <div className="flex items-center justify-between gap-4">
                   <div>
