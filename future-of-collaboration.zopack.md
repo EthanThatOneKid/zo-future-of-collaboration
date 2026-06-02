@@ -20,6 +20,7 @@ exported: 2026-06-02
 import { useMemo, useState } from "react";
 
 const GRID_SIZE = 100;
+const MAX_MOUNTED_PORTALS = 8;
 
 const exampleProjects = [
   ["ct-144-black-hole", "Black Hole"],
@@ -122,72 +123,58 @@ function buildTiles(): Tile[] {
   });
 }
 
-function TilePortal({ tile, mode = "tile" }: { tile: Tile; mode?: "tile" | "panel" }) {
-  const scale = mode === "tile" ? 0.24 : 0.42;
+function PortalIframe({ tile, scale }: { tile: Tile; scale: number }) {
   const size = `${100 / scale}%`;
   return (
-    <div className="absolute inset-0 overflow-hidden bg-black">
-      <iframe
-        title={`${tile.projectTitle} portal preview`}
-        src={tile.projectUrl}
-        loading="lazy"
-        className="pointer-events-none absolute left-0 top-0 border-0"
-        style={{
-          width: size,
-          height: size,
-          transform: `scale(${scale})`,
-          transformOrigin: "0 0",
-        }}
-      />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(255,255,255,.12),rgba(0,0,0,.32)_62%,rgba(0,0,0,.7))]" />
-    </div>
-  );
-}
-
-function TileThumbnail({ tile }: { tile: Tile }) {
-  if (!tile.thumbnailUrl) {
-    return <div className="absolute inset-0" style={{ backgroundColor: tile.color }} />;
-  }
-  return (
-    <div
-      className="absolute inset-0 bg-cover bg-center"
-      style={{
-        backgroundImage: `url(${tile.thumbnailUrl})`,
-        filter: "saturate(.5) contrast(.95)",
-      }}
+    <iframe
+      title={`${tile.projectTitle} portal preview`}
+      src={tile.projectUrl}
+      loading="lazy"
+      className="pointer-events-none absolute left-0 top-0 border-0"
+      style={{ width: size, height: size, transform: `scale(${scale})`, transformOrigin: "0 0" }}
     />
   );
 }
 
 function TileCard({
   tile,
-  active,
   hover,
-  onSelect,
+  mounted,
   onHover,
 }: {
   tile: Tile;
-  active: boolean;
   hover: boolean;
-  onSelect: (tile: Tile) => void;
+  mounted: boolean;
   onHover: (tile: Tile | null) => void;
 }) {
   const hasProject = tile.status !== "empty";
-  const showPortal = hasProject && (active || hover);
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(tile)}
-      onMouseEnter={() => onHover(tile)}
-      onMouseLeave={() => onHover(null)}
-      onFocus={() => onHover(tile)}
-      onBlur={() => onHover(null)}
-      className={`group relative h-[156px] overflow-hidden bg-neutral-900 text-left outline-none transition duration-200 hover:z-10 hover:scale-[1.025] focus-visible:z-10 focus-visible:scale-[1.025] focus-visible:ring-2 focus-visible:ring-[#00a8ff] sm:h-[180px] ${active ? "z-10 ring-2 ring-[#00a8ff]" : ""}`}
-      aria-label={`Tile ${tile.id}: ${tile.projectTitle} by ${tile.ownerName}`}
-    >
-      {hasProject && !showPortal ? <TileThumbnail tile={tile} /> : null}
-      {hasProject && showPortal ? <TilePortal tile={tile} /> : null}
-      {!hasProject ? <div className="absolute inset-0" style={{ backgroundColor: tile.color }} /> : null}
+  const className = `group relative h-[156px] overflow-hidden bg-neutral-900 text-left outline-none transition duration-200 hover:z-10 hover:scale-[1.025] focus-visible:z-10 focus-visible:scale-[1.025] focus-visible:ring-2 focus-visible:ring-[#00a8ff] sm:h-[180px]`;
+  const Inner = (
+    <>
+      {hasProject ? (
+        <>
+          <div
+            className="absolute inset-0 bg-cover bg-center transition-opacity duration-300 ease-out"
+            style={{
+              backgroundImage: `url(${tile.thumbnailUrl})`,
+              filter: "saturate(.5) contrast(.95)",
+              opacity: hover ? 0 : 1,
+            }}
+          />
+          {mounted ? (
+            <div
+              className="absolute inset-0 overflow-hidden bg-black transition-opacity duration-300 ease-out"
+              style={{ opacity: hover ? 1 : 0 }}
+              aria-hidden={!hover}
+            >
+              <PortalIframe tile={tile} scale={0.24} />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(255,255,255,.12),rgba(0,0,0,.32)_62%,rgba(0,0,0,.7))]" />
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <div className="absolute inset-0" style={{ backgroundColor: tile.color }} />
+      )}
       {hasProject ? (
         <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,.14),rgba(255,255,255,0)_38%,rgba(0,0,0,.24))] opacity-80 transition duration-300 group-hover:opacity-35 group-focus-visible:opacity-35" />
       ) : null}
@@ -200,19 +187,64 @@ function TileCard({
           <span className="rounded bg-black/65 px-1.5 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-white/70">open</span>
         ) : null}
       </div>
-      <span className="absolute bottom-2 right-2 rounded-sm bg-black/45 px-1.5 py-0.5 font-mono text-[10px] font-bold text-white/90 backdrop-blur-sm">
-        {tile.id}
-      </span>
+      <span className="absolute bottom-2 right-2 rounded-sm bg-black/45 px-1.5 py-0.5 font-mono text-[10px] font-bold text-white/90 backdrop-blur-sm">{tile.id}</span>
+    </>
+  );
+  if (hasProject) {
+    return (
+      <a
+        href={tile.projectUrl}
+        target="_blank"
+        rel="noreferrer"
+        onMouseEnter={() => onHover(tile)}
+        onMouseLeave={() => onHover(null)}
+        onFocus={() => onHover(tile)}
+        onBlur={() => onHover(null)}
+        className={className}
+        aria-label={`Open ${tile.projectTitle} by ${tile.ownerName} in a new tab`}
+      >
+        {Inner}
+      </a>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onMouseEnter={() => onHover(tile)}
+      onMouseLeave={() => onHover(null)}
+      onFocus={() => onHover(tile)}
+      onBlur={() => onHover(null)}
+      className={className}
+      aria-label={`Tile ${tile.id}: ${tile.projectTitle} — available`}
+    >
+      {Inner}
     </button>
   );
 }
 
 export default function FutureOfCollaboration() {
   const tiles = useMemo(() => buildTiles(), []);
-  const [selected, setSelected] = useState<Tile>(tiles[0]);
-  const [hovered, setHovered] = useState<Tile | null>(null);
+  const [hoveredId, setHoveredId] = useState<number | null>(null);
+  const [lruIds, setLruIds] = useState<number[]>([]);
+
+  const handleHover = (tile: Tile | null) => {
+    if (!tile) {
+      setHoveredId(null);
+      return;
+    }
+    setHoveredId(tile.id);
+    setLruIds((prev) => {
+      const without = prev.filter((id) => id !== tile.id);
+      return [tile.id, ...without].slice(0, MAX_MOUNTED_PORTALS);
+    });
+  };
+
+  const isMounted = (id: number) => lruIds.includes(id);
   const liveCount = tiles.filter((tile) => tile.status === "live").length;
-  const selectedHasProject = selected.status !== "empty";
+  const previewTile: Tile = hoveredId !== null ? tiles.find((t) => t.id === hoveredId) ?? tiles[0] : tiles[0];
+  const previewHasProject = previewTile.status !== "empty";
+  const previewMounted = isMounted(previewTile.id);
 
   return (
     <main className="min-h-screen bg-[#202020] text-[#d7d7d7]">
@@ -231,14 +263,15 @@ export default function FutureOfCollaboration() {
               <div key={group.label} className="mb-10">
                 <div className="mb-2 font-bold text-[#00a8ff]">{group.label}</div>
                 {group.items.map((item) => (
-                  <button
+                  <a
                     key={item}
-                    type="button"
+                    href={item === "github" ? "https://github.com/EthanThatOneKid/zo-future-of-collaboration" : "/examples"}
+                    target={item === "github" ? "_blank" : undefined}
+                    rel={item === "github" ? "noreferrer" : undefined}
                     className="block text-left text-[#bdbdbd] transition hover:text-white"
-                    onClick={() => setSelected(tiles[(item.length * 7) % tiles.length])}
                   >
                     {item}
-                  </button>
+                  </a>
                 ))}
               </div>
             ))}
@@ -253,7 +286,7 @@ export default function FutureOfCollaboration() {
                 <h1 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white sm:text-4xl">Examples index as a 100-tile wall.</h1>
               </div>
               <div className="grid grid-cols-3 gap-px overflow-hidden rounded border border-white/10 bg-white/10 font-mono text-xs uppercase tracking-[0.16em] text-white/60">
-                <div className="bg-[#252525] px-4 py-2"><b className="text-lg text-white">100</b><br />tiles</div>
+                <div className="bg-[#252525] px-4 py-2"><b className="text-lg text-white">{GRID_SIZE}</b><br />tiles</div>
                 <div className="bg-[#252525] px-4 py-2"><b className="text-lg text-white">{liveCount}</b><br />examples</div>
                 <div className="bg-[#252525] px-4 py-2"><b className="text-lg text-[#ffd166]">{GRID_SIZE - liveCount}</b><br />open</div>
               </div>
@@ -265,33 +298,49 @@ export default function FutureOfCollaboration() {
               <TileCard
                 key={tile.id}
                 tile={tile}
-                active={selected.id === tile.id}
-                hover={hovered?.id === tile.id}
-                onSelect={setSelected}
-                onHover={setHovered}
+                hover={hoveredId === tile.id}
+                mounted={isMounted(tile.id)}
+                onHover={handleHover}
               />
             ))}
           </div>
 
           <footer className="grid gap-px bg-[#151515] md:grid-cols-[1fr_1fr]">
             <div className="relative min-h-[420px] overflow-hidden bg-black">
-              {selectedHasProject ? (
-                <TilePortal tile={selected} mode="panel" />
+              {previewHasProject && previewMounted ? (
+                <div className="absolute inset-0">
+                  <PortalIframe tile={previewTile} scale={0.42} />
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(255,255,255,.12),rgba(0,0,0,.32)_62%,rgba(0,0,0,.7))]" />
+                </div>
+              ) : previewHasProject ? (
+                <div
+                  className="absolute inset-0 bg-cover bg-center"
+                  style={{ backgroundImage: `url(${previewTile.thumbnailUrl})` }}
+                />
               ) : (
-                <div className="absolute inset-0" style={{ backgroundColor: selected.color }} />
+                <div className="absolute inset-0" style={{ backgroundColor: previewTile.color }} />
               )}
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/80 to-transparent p-5 sm:p-7">
-                <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#00a8ff]">Portal Preview</p>
-                <h2 className="mt-3 text-4xl font-black tracking-[-0.05em] text-white">#{selected.id} {selected.projectTitle}</h2>
-                <p className="mt-2 text-[#bdbdbd]">{selected.ownerName} · {selected.zoUsername}</p>
-                <a className="mt-4 inline-block break-all font-mono text-sm text-[#00a8ff] hover:text-white" href={selected.projectUrl} target="_blank" rel="noreferrer">
-                  {selected.projectUrl}
-                </a>
+                <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#00a8ff]">Hover Preview</p>
+                <h2 className="mt-3 text-4xl font-black tracking-[-0.05em] text-white">#{previewTile.id} {previewTile.projectTitle}</h2>
+                <p className="mt-2 text-[#bdbdbd]">{previewTile.ownerName} · {previewTile.zoUsername}</p>
+                {previewHasProject ? (
+                  <a className="mt-4 inline-block break-all font-mono text-sm text-[#00a8ff] hover:text-white" href={previewTile.projectUrl} target="_blank" rel="noreferrer">
+                    {previewTile.projectUrl} ↗
+                  </a>
+                ) : (
+                  <a className="mt-4 inline-block break-all font-mono text-sm text-[#00a8ff] hover:text-white" href="https://{{HANDLE}}.zo.space/examples">
+                    https://{{HANDLE}}.zo.space/examples
+                  </a>
+                )}
               </div>
             </div>
             <div className="bg-[#222] p-5 font-mono text-sm leading-6 text-[#bdbdbd] sm:p-7">
               <div className="text-[#00a8ff]">rules</div>
-              <p className="mt-3">The live examples index is mapped onto the first 30 grid tiles. Populated tiles render a captured WebP thumbnail at rest and only mount the live iframe portal on hover or selection, keeping the page responsive.</p>
+              <p className="mt-3">Hover a populated tile to preview its portal in the panel below. Click (or middle/⌘-click) to open the underlying Zo space in a new tab. Portals stay mounted for the {MAX_MOUNTED_PORTALS} most recently visited tiles, so returning to a tile is instant.</p>
+              <div className="mt-4 font-mono text-xs uppercase tracking-[0.16em] text-white/45">
+                cache: {lruIds.length} / {MAX_MOUNTED_PORTALS} mounted
+              </div>
               <a className="mt-6 inline-block rounded border border-[#00a8ff] px-3 py-2 text-[#00a8ff] hover:bg-[#00a8ff] hover:text-black" href="/examples">
                 Open live examples index
               </a>
