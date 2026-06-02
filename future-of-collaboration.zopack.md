@@ -17,9 +17,13 @@ exported: 2026-06-02
 ### `/future-of-collaboration` (page, public)
 
 ```tsx
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
+import { NuqsAdapter } from "https://esm.sh/nuqs@2.6.0/adapters/react";
+import { parseAsInteger, useQueryState } from "https://esm.sh/nuqs@2.6.0";
 
-const GRID_SIZE = 100;
+const DEFAULT_GRID_SIZE = 100;
+const MIN_GRID_SIZE = 1;
+const MAX_GRID_SIZE = 100;
 const MAX_MOUNTED_PORTALS = 8;
 
 const exampleProjects = [
@@ -90,6 +94,10 @@ function colorForPosition(index: number, total: number) {
   return `rgb(${mix(r1, r2, localT)}, ${mix(g1, g2, localT)}, ${mix(b1, b2, localT)})`;
 }
 
+function clampGridSize(value: number) {
+  return Math.max(MIN_GRID_SIZE, Math.min(MAX_GRID_SIZE, value));
+}
+
 type Tile = {
   id: number;
   color: string;
@@ -106,16 +114,16 @@ function thumbnailFor(slug: string): string {
   return `/examples/thumbnails/${slug}.webp`;
 }
 
-function buildTiles(): Tile[] {
-  return Array.from({ length: GRID_SIZE }, (_, index) => {
+function buildTiles(gridSize: number): Tile[] {
+  return Array.from({ length: gridSize }, (_, index) => {
     const project = exampleProjects[index];
     return {
       id: index + 1,
-      color: colorForPosition(index, GRID_SIZE),
+      color: colorForPosition(index, gridSize),
       zoUsername: project ? `example-user-${String(index + 1).padStart(3, "0")}` : "unclaimed",
       ownerName: project ? names[index % names.length] : "Open slot",
       projectTitle: project ? project[1] : "Available tile",
-      projectUrl: project ? `/examples/${project[0]}` : "https://{{HANDLE}}.zo.space/examples",
+      projectUrl: project ? `/examples/${project[0]}` : "https://etok.zo.space/examples",
       thumbnailUrl: project ? thumbnailFor(project[0]) : null,
       status: project ? "live" : "empty",
       scene: index % 12,
@@ -233,7 +241,22 @@ function TileCard({
 }
 
 export default function FutureOfCollaboration() {
-  const tiles = useMemo(() => buildTiles(), []);
+  return (
+    <NuqsAdapter>
+      <Suspense fallback={<div className="min-h-screen bg-[#202020]" />}>
+        <FutureOfCollaborationContent />
+      </Suspense>
+    </NuqsAdapter>
+  );
+}
+
+function FutureOfCollaborationContent() {
+  const [gridCount, setGridCount] = useQueryState(
+    "tiles",
+    parseAsInteger.withDefault(DEFAULT_GRID_SIZE),
+  );
+  const gridSize = clampGridSize(gridCount);
+  const tiles = useMemo(() => buildTiles(gridSize), [gridSize]);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   const [lruIds, setLruIds] = useState<number[]>([]);
 
@@ -292,12 +315,51 @@ export default function FutureOfCollaboration() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#00a8ff]">Future of Collaboration</p>
-                <h1 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white sm:text-4xl">Examples index as a 100-tile wall.</h1>
+                <h1 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white sm:text-4xl">Examples index as a {gridSize}-tile wall.</h1>
               </div>
-              <div className="grid grid-cols-3 gap-px overflow-hidden rounded border border-white/10 bg-white/10 font-mono text-xs uppercase tracking-[0.16em] text-white/60">
-                <div className="bg-[#252525] px-4 py-2"><b className="text-lg text-white">{GRID_SIZE}</b><br />tiles</div>
-                <div className="bg-[#252525] px-4 py-2"><b className="text-lg text-white">{liveCount}</b><br />examples</div>
-                <div className="bg-[#252525] px-4 py-2"><b className="text-lg text-[#ffd166]">{GRID_SIZE - liveCount}</b><br />open</div>
+              <div className="grid gap-3 rounded border border-white/10 bg-[#252525] p-3 font-mono text-xs uppercase tracking-[0.16em] text-white/60 sm:min-w-[320px]">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <div className="text-[10px] tracking-[0.22em] text-white/45">tiles</div>
+                    <div className="mt-1 text-lg font-black text-white">{gridSize}</div>
+                  </div>
+                  <label className="text-right">
+                    <span className="block text-[10px] tracking-[0.22em] text-white/45">query</span>
+                    <code className="mt-1 block rounded border border-white/10 bg-black/30 px-2 py-1 text-[11px] text-[#00a8ff]">?tiles={gridSize}</code>
+                  </label>
+                </div>
+                <input
+                  type="range"
+                  min={MIN_GRID_SIZE}
+                  max={MAX_GRID_SIZE}
+                  value={gridSize}
+                  onChange={(event) => setGridCount(clampGridSize(Number(event.target.value)))}
+                  className="h-2 w-full cursor-pointer accent-[#00a8ff]"
+                  aria-label="Number of displayed tiles"
+                />
+                <div className="flex items-center gap-3">
+                  <label className="text-[10px] tracking-[0.22em] text-white/45">max visible</label>
+                  <input
+                    type="number"
+                    min={MIN_GRID_SIZE}
+                    max={MAX_GRID_SIZE}
+                    value={gridSize}
+                    onChange={(event) => setGridCount(clampGridSize(Number(event.target.value || DEFAULT_GRID_SIZE)))}
+                    className="w-24 rounded border border-white/10 bg-black/30 px-2 py-1 text-sm text-white outline-none ring-0 [appearance:textfield] focus:border-[#00a8ff]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setGridCount(DEFAULT_GRID_SIZE)}
+                    className="rounded border border-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-white/70 transition hover:border-[#00a8ff] hover:text-[#00a8ff]"
+                  >
+                    reset
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-px overflow-hidden rounded border border-white/10 bg-white/10">
+                  <div className="bg-[#252525] px-4 py-2"><b className="text-lg text-white">{liveCount}</b><br />examples</div>
+                  <div className="bg-[#252525] px-4 py-2"><b className="text-lg text-[#ffd166]">{gridSize - liveCount}</b><br />open</div>
+                  <div className="bg-[#252525] px-4 py-2"><b className="text-lg text-white">url</b><br />sync</div>
+                </div>
               </div>
             </div>
           </header>
@@ -338,15 +400,15 @@ export default function FutureOfCollaboration() {
                     {previewTile.projectUrl} ↗
                   </a>
                 ) : (
-                  <a className="mt-4 inline-block break-all font-mono text-sm text-[#00a8ff] hover:text-white" href="https://{{HANDLE}}.zo.space/examples">
-                    https://{{HANDLE}}.zo.space/examples
+                  <a className="mt-4 inline-block break-all font-mono text-sm text-[#00a8ff] hover:text-white" href="https://etok.zo.space/examples">
+                    https://etok.zo.space/examples
                   </a>
                 )}
               </div>
             </div>
             <div className="bg-[#222] p-5 font-mono text-sm leading-6 text-[#bdbdbd] sm:p-7">
               <div className="text-[#00a8ff]">rules</div>
-              <p className="mt-3">Hover a populated tile to preview its portal in the panel below. Click (or middle/⌘-click) to open the underlying Zo space in a new tab. Portals stay mounted for the {MAX_MOUNTED_PORTALS} most recently visited tiles, so returning to a tile is instant.</p>
+              <p className="mt-3">Hover a populated tile to preview its portal in the panel below. Click (or middle/⌘-click) to open the underlying Zo space in a new tab. Portals stay mounted for the {MAX_MOUNTED_PORTALS} most recently visited tiles, so returning to a tile is instant. Use the query param to compare different tile counts quickly.</p>
               <div className="mt-4 font-mono text-xs uppercase tracking-[0.16em] text-white/45">
                 cache: {lruIds.length} / {MAX_MOUNTED_PORTALS} mounted
               </div>
@@ -360,6 +422,7 @@ export default function FutureOfCollaboration() {
     </main>
   );
 }
+
 ```
 
 ## Variables
