@@ -621,6 +621,7 @@ function GlobeStage({
 
       const detail = pickIcoDetail(tiles.length);
       const faceData = buildIcoSphereFaces(detail);
+      const globeTiles = faceData.map((_, index) => tiles[index % tiles.length]);
       const sphereRadius = Math.max(11, 18 - detail * 1.6);
       const core = new THREE.Mesh(
         new THREE.IcosahedronGeometry(sphereRadius + 0.05, 1),
@@ -664,8 +665,8 @@ function GlobeStage({
       const temporaryFaceNormal = new THREE.Vector3(0, 0, 1);
       const temporaryNormal = new THREE.Vector3();
 
-      tiles.forEach((tile, index) => {
-        const face = faceData[index % faceData.length];
+      globeTiles.forEach((tile, index) => {
+        const face = faceData[index];
         const material = new THREE.MeshBasicMaterial({
           color: tile.thumbnailUrl ? new THREE.Color(0xffffff) : new THREE.Color(tile.color),
           side: THREE.DoubleSide,
