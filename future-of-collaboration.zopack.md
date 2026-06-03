@@ -421,9 +421,9 @@ function GlobeStage({
       geometries.push(core.geometry);
       materials.push(core.material);
 
-      const panelRadius = Math.max(8.8, 12.2 - Math.min(tiles.length, 100) * 0.03);
-      const panelWidth = Math.min(7.2, Math.max(5.8, panelRadius * 0.6));
-      const panelHeight = Math.min(4.4, Math.max(3.4, panelWidth * 0.62));
+      const panelRadius = Math.max(5.6, 7.2 - Math.min(tiles.length, 100) * 0.015);
+      const panelWidth = Math.min(14.5, Math.max(11.0, panelRadius * 1.62));
+      const panelHeight = Math.min(9.8, Math.max(7.2, panelWidth * 0.78));
       const loader = new THREE.TextureLoader();
 
       tiles.forEach((tile, index) => {
@@ -447,7 +447,7 @@ function GlobeStage({
         mesh.position.set(position.x, position.y, position.z);
         mesh.lookAt(position.x * 2, position.y * 2, position.z * 2);
         mesh.userData = { tile };
-        mesh.scale.setScalar(1);
+        mesh.scale.setScalar(1.24);
         scene.add(mesh);
         panels.push({ mesh, tile });
       });
