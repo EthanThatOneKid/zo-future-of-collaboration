@@ -17,12 +17,13 @@ exported: 2026-06-02
 ### `/future-of-collaboration` (page, public)
 
 ```tsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const DEFAULT_GRID_SIZE = 100;
 const MIN_GRID_SIZE = 1;
 const MAX_GRID_SIZE = 100;
 const MAX_MOUNTED_PORTALS = 3;
+const DEFAULT_VIEW_MODE = "grid";
 
 const exampleProjects = [
   ["ct-144-black-hole", "Black Hole"],
@@ -102,6 +103,8 @@ function isTruthyQueryValue(value: string | null) {
   return normalized === "" || normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
 }
 
+type ViewMode = "grid" | "globe";
+
 type Tile = {
   id: number;
   color: string;
@@ -116,6 +119,30 @@ type Tile = {
 
 function thumbnailFor(slug: string): string {
   return `/examples/thumbnails/${slug}.webp`;
+}
+
+function isViewMode(value: string | null): value is ViewMode {
+  return value === "grid" || value === "globe";
+}
+
+function getInitialGridSize() {
+  if (typeof window === "undefined") return DEFAULT_GRID_SIZE;
+  const params = new URLSearchParams(window.location.search);
+  const parsed = Number(params.get("tiles") ?? DEFAULT_GRID_SIZE);
+  return Number.isFinite(parsed) ? clampGridSize(parsed) : DEFAULT_GRID_SIZE;
+}
+
+function getInitialViewMode() {
+  if (typeof window === "undefined") return DEFAULT_VIEW_MODE;
+  const params = new URLSearchParams(window.location.search);
+  const value = params.get("view");
+  return isViewMode(value) ? value : DEFAULT_VIEW_MODE;
+}
+
+function getInitialDebugMode() {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  return isTruthyQueryValue(params.get("debug"));
 }
 
 function buildTiles(gridSize: number): Tile[] {
@@ -146,6 +173,19 @@ function PortalIframe({ tile, scale }: { tile: Tile; scale: number }) {
       style={{ width: size, height: size, transform: `scale(${scale})`, transformOrigin: "0 0" }}
     />
   );
+}
+
+function fibonacciSpherePosition(index: number, total: number, radius: number) {
+  const offset = 2 / total;
+  const increment = Math.PI * (3 - Math.sqrt(5));
+  const y = index * offset - 1 + offset / 2;
+  const radial = Math.sqrt(Math.max(0, 1 - y * y));
+  const phi = index * increment;
+  return {
+    x: Math.cos(phi) * radial * radius,
+    y: y * radius,
+    z: Math.sin(phi) * radial * radius,
+  };
 }
 
 function TileCard({
@@ -244,23 +284,226 @@ function TileCard({
   );
 }
 
+function GlobeStage({
+  tiles,
+  onHover,
+}: {
+  tiles: Tile[];
+  onHover: (tile: Tile | null) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const onHoverRef = useRef(onHover);
+
+  useEffect(() => {
+    onHoverRef.current = onHover;
+  }, [onHover]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || typeof window === "undefined") return;
+
+    let cancelled = false;
+    let animationFrame = 0;
+    let resizeObserver: ResizeObserver | null = null;
+    const textures: Array<{ dispose: () => void }> = [];
+    const materials: Array<{ dispose: () => void }> = [];
+    const geometries: Array<{ dispose: () => void }> = [];
+    const panels: Array<{ mesh: any; tile: Tile }> = [];
+    let renderer: any = null;
+    let controls: any = null;
+    let scene: any = null;
+    let camera: any = null;
+    let raycaster: any = null;
+    let hoveredPanel: { mesh: any; tile: Tile } | null = null;
+    const pointer = { x: 0, y: 0 };
+
+    const cleanup = () => {
+      cancelled = true;
+      cancelAnimationFrame(animationFrame);
+      resizeObserver?.disconnect();
+      if (renderer) {
+        renderer.domElement.removeEventListener("pointermove", handlePointerMove);
+        renderer.domElement.removeEventListener("pointerleave", handlePointerLeave);
+        renderer.domElement.removeEventListener("click", handleClick);
+      }
+      controls?.dispose?.();
+      for (const material of materials) material.dispose?.();
+      for (const geometry of geometries) geometry.dispose?.();
+      for (const texture of textures) texture.dispose?.();
+      renderer?.dispose?.();
+      if (renderer?.domElement?.parentNode === container) {
+        container.removeChild(renderer.domElement);
+      }
+      onHoverRef.current(null);
+    };
+
+    function setHoveredPanel(nextPanel: { mesh: any; tile: Tile } | null) {
+      if (hoveredPanel?.mesh === nextPanel?.mesh) return;
+      if (hoveredPanel) hoveredPanel.mesh.scale.setScalar(1);
+      hoveredPanel = nextPanel;
+      if (hoveredPanel) {
+        hoveredPanel.mesh.scale.setScalar(1.12);
+        onHoverRef.current(hoveredPanel.tile);
+      } else {
+        onHoverRef.current(null);
+      }
+    }
+
+    function updatePointer(event: PointerEvent) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
+    }
+
+    function handlePointerMove(event: PointerEvent) {
+      if (!raycaster || !camera) return;
+      updatePointer(event);
+      raycaster.setFromCamera(pointer, camera);
+      const intersections = raycaster.intersectObjects(panels.map((entry) => entry.mesh), false);
+      const panel = intersections.length > 0 ? panels.find((entry) => entry.mesh === intersections[0].object) ?? null : null;
+      setHoveredPanel(panel);
+    }
+
+    function handlePointerLeave() {
+      setHoveredPanel(null);
+    }
+
+    function handleClick() {
+      if (!hoveredPanel) return;
+      window.open(hoveredPanel.tile.projectUrl, "_blank", "noopener,noreferrer");
+    }
+
+    async function start() {
+      const THREE = await import("https://esm.sh/three@0.167.1");
+      const { OrbitControls } = await import("https://esm.sh/three@0.167.1/examples/jsm/controls/OrbitControls?bundle");
+      if (cancelled || !container) return;
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color("#111111");
+      camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
+      camera.position.set(0, 0, 28);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio ?? 1, 2));
+      renderer.setSize(container.clientWidth, container.clientHeight, false);
+      container.appendChild(renderer.domElement);
+
+      controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.07;
+      controls.minDistance = 16;
+      controls.maxDistance = 44;
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 0.4;
+      controls.target.set(0, 0, 0);
+
+      raycaster = new THREE.Raycaster();
+
+      const ambient = new THREE.AmbientLight(0xffffff, 2.1);
+      scene.add(ambient);
+      const directional = new THREE.DirectionalLight(0x9fd8ff, 1.8);
+      directional.position.set(7, 12, 10);
+      scene.add(directional);
+      const backLight = new THREE.DirectionalLight(0x3366ff, 0.7);
+      backLight.position.set(-12, -8, -10);
+      scene.add(backLight);
+
+      const core = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(9.3, 1),
+        new THREE.MeshBasicMaterial({
+          color: 0x0f1720,
+          wireframe: true,
+          transparent: true,
+          opacity: 0.16,
+        }),
+      );
+      scene.add(core);
+      geometries.push(core.geometry);
+      materials.push(core.material);
+
+      const panelRadius = 12.2;
+      const panelWidth = 3.7;
+      const panelHeight = 2.25;
+      const loader = new THREE.TextureLoader();
+
+      tiles.forEach((tile, index) => {
+        const materialOptions: { map?: any; color: any } = { color: new THREE.Color(tile.color) };
+        if (tile.thumbnailUrl) {
+          const texture = loader.load(tile.thumbnailUrl);
+          texture.colorSpace = THREE.SRGBColorSpace;
+          texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+          textures.push(texture);
+          materialOptions.map = texture;
+        }
+
+        const material = new THREE.MeshBasicMaterial(materialOptions);
+        materials.push(material);
+
+        const geometry = new THREE.PlaneGeometry(panelWidth, panelHeight, 1, 1);
+        geometries.push(geometry);
+
+        const mesh = new THREE.Mesh(geometry, material);
+        const position = fibonacciSpherePosition(index, tiles.length, panelRadius);
+        mesh.position.set(position.x, position.y, position.z);
+        mesh.lookAt(position.x * 2, position.y * 2, position.z * 2);
+        mesh.userData = { tile };
+        mesh.scale.setScalar(1);
+        scene.add(mesh);
+        panels.push({ mesh, tile });
+      });
+
+      const resize = () => {
+        if (!renderer || !camera || !container) return;
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        renderer.setSize(width, height, false);
+        camera.aspect = width / Math.max(1, height);
+        camera.updateProjectionMatrix();
+      };
+
+      resizeObserver = new ResizeObserver(resize);
+      resizeObserver.observe(container);
+      resize();
+
+      renderer.domElement.addEventListener("pointermove", handlePointerMove);
+      renderer.domElement.addEventListener("pointerleave", handlePointerLeave);
+      renderer.domElement.addEventListener("click", handleClick);
+
+      const tick = () => {
+        if (cancelled) return;
+        controls.update();
+        renderer.render(scene, camera);
+        animationFrame = window.requestAnimationFrame(tick);
+      };
+
+      tick();
+    }
+
+    void start();
+    return cleanup;
+  }, [tiles]);
+
+  return (
+    <div className="relative min-h-[720px] overflow-hidden bg-[radial-gradient(circle_at_50%_40%,rgba(21,40,66,.75),rgba(8,8,10,1)_72%)]">
+      <div ref={containerRef} className="absolute inset-0" />
+      <div className="pointer-events-none absolute left-4 top-4 rounded border border-white/10 bg-black/35 px-3 py-2 font-mono text-xs uppercase tracking-[0.2em] text-white/65 backdrop-blur-sm">
+        globe mode · orbit controls
+      </div>
+      <div className="pointer-events-none absolute right-4 top-4 rounded border border-white/10 bg-black/35 px-3 py-2 font-mono text-xs uppercase tracking-[0.2em] text-white/65 backdrop-blur-sm">
+        {tiles.length} tiles
+      </div>
+    </div>
+  );
+}
+
 export default function FutureOfCollaboration() {
   return <FutureOfCollaborationContent />;
 }
 
 function FutureOfCollaborationContent() {
-  const [gridSize, setGridSize] = useState(DEFAULT_GRID_SIZE);
-  const [debugMode, setDebugMode] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    const parsed = Number(params.get("tiles") ?? DEFAULT_GRID_SIZE);
-    if (Number.isFinite(parsed)) {
-      setGridSize(clampGridSize(parsed));
-    }
-    setDebugMode(isTruthyQueryValue(params.get("debug")));
-  }, []);
+  const [gridSize, setGridSize] = useState(() => getInitialGridSize());
+  const [viewMode, setViewMode] = useState<ViewMode>(() => getInitialViewMode());
+  const [debugMode, setDebugMode] = useState(() => getInitialDebugMode());
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -270,14 +513,28 @@ function FutureOfCollaborationContent() {
     } else {
       params.set("tiles", String(gridSize));
     }
+    if (viewMode === DEFAULT_VIEW_MODE) {
+      params.delete("view");
+    } else {
+      params.set("view", viewMode);
+    }
+    if (debugMode) {
+      params.set("debug", "1");
+    } else {
+      params.delete("debug");
+    }
     const search = params.toString();
     const nextUrl = `${window.location.pathname}${search ? `?${search}` : ""}${window.location.hash}`;
     window.history.replaceState(null, "", nextUrl);
-  }, [gridSize]);
+  }, [gridSize, viewMode, debugMode]);
 
   const tiles = useMemo(() => buildTiles(gridSize), [gridSize]);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   const [lruIds, setLruIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    setHoveredId(null);
+  }, [viewMode]);
 
   const handleHover = (tile: Tile | null) => {
     if (!tile) {
@@ -346,6 +603,22 @@ function FutureOfCollaborationContent() {
                   Future of Collaboration
                 </span>
               </h1>
+              <div className="flex items-center gap-2 rounded border border-white/10 bg-[#252525] p-1 font-mono text-xs uppercase tracking-[0.16em] text-white/60">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("grid")}
+                  className={`rounded px-3 py-2 transition ${viewMode === "grid" ? "bg-[#00a8ff] text-black" : "hover:bg-white/10 hover:text-white"}`}
+                >
+                  grid
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("globe")}
+                  className={`rounded px-3 py-2 transition ${viewMode === "globe" ? "bg-[#00a8ff] text-black" : "hover:bg-white/10 hover:text-white"}`}
+                >
+                  globe
+                </button>
+              </div>
               {debugMode ? (
                 <div className="grid gap-3 rounded border border-white/10 bg-[#252525] p-3 font-mono text-xs uppercase tracking-[0.16em] text-white/60 sm:min-w-[320px]">
                   <label className="grid gap-1">
@@ -376,17 +649,21 @@ function FutureOfCollaborationContent() {
             </div>
           </header>
 
-          <div className="grid grid-cols-1 gap-px bg-[#151515] sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-            {tiles.map((tile) => (
-              <TileCard
-                key={tile.id}
-                tile={tile}
-                hover={hoveredId === tile.id}
-                mounted={isMounted(tile.id)}
-                onHover={handleHover}
-              />
-            ))}
-          </div>
+          {viewMode === "grid" ? (
+            <div className="grid grid-cols-1 gap-px bg-[#151515] sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+              {tiles.map((tile) => (
+                <TileCard
+                  key={tile.id}
+                  tile={tile}
+                  hover={hoveredId === tile.id}
+                  mounted={isMounted(tile.id)}
+                  onHover={handleHover}
+                />
+              ))}
+            </div>
+          ) : (
+            <GlobeStage tiles={tiles} onHover={handleHover} />
+          )}
 
           <footer className="grid gap-px bg-[#151515] md:grid-cols-[1fr_1fr]">
             <div className="relative min-h-[420px] overflow-hidden bg-black">
