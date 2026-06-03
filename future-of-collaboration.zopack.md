@@ -22,7 +22,7 @@ import { useEffect, useMemo, useState } from "react";
 const DEFAULT_GRID_SIZE = 100;
 const MIN_GRID_SIZE = 1;
 const MAX_GRID_SIZE = 100;
-const MAX_MOUNTED_PORTALS = 8;
+const MAX_MOUNTED_PORTALS = 3;
 
 const exampleProjects = [
   ["ct-144-black-hole", "Black Hole"],
