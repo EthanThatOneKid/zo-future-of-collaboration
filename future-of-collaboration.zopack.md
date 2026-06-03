@@ -421,9 +421,9 @@ function GlobeStage({
       geometries.push(core.geometry);
       materials.push(core.material);
 
-      const panelRadius = 12.2;
-      const panelWidth = 3.7;
-      const panelHeight = 2.25;
+      const panelRadius = Math.max(8.8, 12.2 - Math.min(tiles.length, 100) * 0.03);
+      const panelWidth = Math.min(7.2, Math.max(5.8, panelRadius * 0.6));
+      const panelHeight = Math.min(4.4, Math.max(3.4, panelWidth * 0.62));
       const loader = new THREE.TextureLoader();
 
       tiles.forEach((tile, index) => {
