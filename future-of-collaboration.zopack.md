@@ -199,13 +199,13 @@ function TileCard({
       {hasProject ? (
         <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,.14),rgba(255,255,255,0)_38%,rgba(0,0,0,.24))] opacity-80 transition duration-300 group-hover:opacity-35 group-focus-visible:opacity-35" />
       ) : null}
-      <div className="absolute left-0 right-0 top-0 flex items-start justify-between p-3 text-white opacity-0 transition duration-300 group-hover:opacity-100 group-focus-visible:opacity-100">
-        <div className="max-w-[78%]">
+      <div className="absolute inset-0 flex items-center justify-center px-4 text-center text-white opacity-0 transition duration-300 group-hover:opacity-100 group-focus-visible:opacity-100">
+        <div className="max-w-[88%]">
           <div className="truncate text-[11px] font-bold uppercase tracking-[0.2em] text-white/70">{tile.zoUsername}</div>
           <div className="mt-1 truncate text-lg font-black tracking-[-0.04em] drop-shadow">{tile.projectTitle}</div>
         </div>
         {tile.status === "empty" ? (
-          <span className="rounded bg-black/65 px-1.5 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-white/70">open</span>
+          <span className="absolute right-3 top-3 rounded bg-black/65 px-1.5 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-white/70">open</span>
         ) : null}
       </div>
       <span className="absolute bottom-2 right-2 rounded-sm bg-black/45 px-1.5 py-0.5 font-mono text-[10px] font-bold text-white/90 backdrop-blur-sm">{tile.id}</span>
