@@ -802,7 +802,7 @@ function FutureOfCollaborationContent() {
   }, [gridSize, viewMode, debugMode]);
 
   const tiles = useMemo(() => buildTiles(gridSize), [gridSize]);
-  const globeTiles = useMemo(() => (viewMode === "globe" ? buildTiles(Math.max(gridSize, 80)) : tiles), [gridSize, tiles, viewMode]);
+  const globeTiles = tiles;
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   const [lruIds, setLruIds] = useState<number[]>([]);
 
