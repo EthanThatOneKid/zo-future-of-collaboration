@@ -5,7 +5,7 @@ name: future-of-collaboration
 description: "100-tile collaboration wall powered by the live Zo examples index."
 author: etok.zo.computer
 routes: 1
-exported: 2026-06-02
+exported: 2026-06-03
 ---
 
 # future-of-collaboration
@@ -154,7 +154,7 @@ function buildTiles(gridSize: number): Tile[] {
       zoUsername: project ? `example-user-${String(index + 1).padStart(3, "0")}` : "unclaimed",
       ownerName: project ? names[index % names.length] : "Open slot",
       projectTitle: project ? project[1] : "Available tile",
-      projectUrl: project ? `/examples/${project[0]}` : "https://etok.zo.space/examples",
+      projectUrl: project ? `/examples/${project[0]}` : "https://{{HANDLE}}.zo.space/examples",
       thumbnailUrl: project ? thumbnailFor(project[0]) : null,
       status: project ? "live" : "empty",
       scene: index % 12,
@@ -173,6 +173,77 @@ function PortalIframe({ tile, scale }: { tile: Tile; scale: number }) {
       style={{ width: size, height: size, transform: `scale(${scale})`, transformOrigin: "0 0" }}
     />
   );
+}
+
+const ICOSA_BASE = 0.5;
+const ICOSA_H = Math.sqrt(1 - ICOSA_BASE * ICOSA_BASE);
+
+const ICOSAHEDRON_VERTICES: ReadonlyArray<readonly [number, number, number]> = [
+  [-ICOSA_BASE, ICOSA_H, 0], [ICOSA_BASE, ICOSA_H, 0], [-ICOSA_BASE, -ICOSA_H, 0], [ICOSA_BASE, -ICOSA_H, 0],
+  [0, -ICOSA_BASE, ICOSA_H], [0, ICOSA_BASE, ICOSA_H], [0, -ICOSA_BASE, -ICOSA_H], [0, ICOSA_BASE, -ICOSA_H],
+  [ICOSA_H, 0, -ICOSA_BASE], [ICOSA_H, 0, ICOSA_BASE], [-ICOSA_H, 0, -ICOSA_BASE], [-ICOSA_H, 0, ICOSA_BASE],
+];
+
+const ICOSAHEDRON_FACES: ReadonlyArray<readonly [number, number, number]> = [
+  [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
+  [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
+  [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
+  [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1],
+];
+
+function normalize(v: { x: number; y: number; z: number }) {
+  const length = Math.hypot(v.x, v.y, v.z) || 1;
+  return { x: v.x / length, y: v.y / length, z: v.z / length };
+}
+
+function midpoint(a: readonly [number, number, number], b: readonly [number, number, number]): readonly [number, number, number] {
+  return normalize({ x: (a[0] + b[0]) / 2, y: (a[1] + b[1]) / 2, z: (a[2] + b[2]) / 2 }) as readonly [number, number, number];
+}
+
+function subdivide(
+  face: readonly [number, number, number],
+  positions: Array<readonly [number, number, number]>,
+  out: Array<readonly [number, number, number]>,
+  detail: number,
+) {
+  let tris: Array<readonly [number, number, number]> = [face];
+  for (let level = 0; level < detail; level++) {
+    const next: Array<readonly [number, number, number]> = [];
+    for (const [a, b, c] of tris) {
+      const ab = midpoint(positions[a], positions[b]);
+      const bc = midpoint(positions[b], positions[c]);
+      const ca = midpoint(positions[c], positions[a]);
+      const iab = positions.length; positions.push(ab);
+      const ibc = positions.length; positions.push(bc);
+      const ica = positions.length; positions.push(ca);
+      next.push([a, iab, ica], [b, ibc, iab], [c, ica, ibc], [iab, ibc, ica]);
+    }
+    tris = next;
+  }
+  out.push(...tris);
+}
+
+function buildIcoSphereFaces(detail: number): Array<{ center: { x: number; y: number; z: number }; normal: { x: number; y: number; z: number } }> {
+  const positions: Array<readonly [number, number, number]> = [...ICOSAHEDRON_VERTICES];
+  const faces: Array<readonly [number, number, number]> = [];
+  for (const face of ICOSAHEDRON_FACES) subdivide(face, positions, faces, detail);
+  return faces.map(([a, b, c]) => {
+    const pa = positions[a];
+    const pb = positions[b];
+    const pc = positions[c];
+    const center = normalize({
+      x: (pa[0] + pb[0] + pc[0]) / 3,
+      y: (pa[1] + pb[1] + pc[1]) / 3,
+      z: (pa[2] + pb[2] + pc[2]) / 3,
+    });
+    return { center, normal: center };
+  });
+}
+
+function pickIcoDetail(tileCount: number): number {
+  let detail = 0;
+  while (20 * Math.pow(4, detail) < tileCount && detail < 5) detail++;
+  return detail;
 }
 
 function fibonacciSpherePosition(index: number, total: number, radius: number) {
@@ -317,26 +388,6 @@ function GlobeStage({
     let hoveredPanel: { mesh: any; tile: Tile } | null = null;
     const pointer = { x: 0, y: 0 };
 
-    const cleanup = () => {
-      cancelled = true;
-      cancelAnimationFrame(animationFrame);
-      resizeObserver?.disconnect();
-      if (renderer) {
-        renderer.domElement.removeEventListener("pointermove", handlePointerMove);
-        renderer.domElement.removeEventListener("pointerleave", handlePointerLeave);
-        renderer.domElement.removeEventListener("click", handleClick);
-      }
-      controls?.dispose?.();
-      for (const material of materials) material.dispose?.();
-      for (const geometry of geometries) geometry.dispose?.();
-      for (const texture of textures) texture.dispose?.();
-      renderer?.dispose?.();
-      if (renderer?.domElement?.parentNode === container) {
-        container.removeChild(renderer.domElement);
-      }
-      onHoverRef.current(null);
-    };
-
     function setHoveredPanel(nextPanel: { mesh: any; tile: Tile } | null) {
       if (hoveredPanel?.mesh === nextPanel?.mesh) return;
       if (hoveredPanel) hoveredPanel.mesh.scale.setScalar(1);
@@ -373,6 +424,26 @@ function GlobeStage({
       window.open(hoveredPanel.tile.projectUrl, "_blank", "noopener,noreferrer");
     }
 
+    const cleanup = () => {
+      cancelled = true;
+      cancelAnimationFrame(animationFrame);
+      resizeObserver?.disconnect();
+      if (renderer) {
+        renderer.domElement.removeEventListener("pointermove", handlePointerMove);
+        renderer.domElement.removeEventListener("pointerleave", handlePointerLeave);
+        renderer.domElement.removeEventListener("click", handleClick);
+      }
+      controls?.dispose?.();
+      for (const material of materials) material.dispose?.();
+      for (const geometry of geometries) geometry.dispose?.();
+      for (const texture of textures) texture.dispose?.();
+      renderer?.dispose?.();
+      if (renderer?.domElement?.parentNode === container) {
+        container.removeChild(renderer.domElement);
+      }
+      onHoverRef.current(null);
+    };
+
     async function start() {
       const THREE = await import("https://esm.sh/three@0.167.1");
       const { OrbitControls } = await import("https://esm.sh/three@0.167.1/examples/jsm/controls/OrbitControls?bundle");
@@ -381,7 +452,7 @@ function GlobeStage({
       scene = new THREE.Scene();
       scene.background = new THREE.Color("#111111");
       camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
-      camera.position.set(0, 0, 28);
+      camera.position.set(0, 0, 36);
 
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio ?? 1, 2));
@@ -408,8 +479,11 @@ function GlobeStage({
       backLight.position.set(-12, -8, -10);
       scene.add(backLight);
 
+      const detail = pickIcoDetail(tiles.length);
+      const faceData = buildIcoSphereFaces(detail);
+      const sphereRadius = Math.max(11, 18 - detail * 1.6);
       const core = new THREE.Mesh(
-        new THREE.IcosahedronGeometry(9.3, 1),
+        new THREE.IcosahedronGeometry(sphereRadius + 0.05, 1),
         new THREE.MeshBasicMaterial({
           color: 0x0f1720,
           wireframe: true,
@@ -421,12 +495,29 @@ function GlobeStage({
       geometries.push(core.geometry);
       materials.push(core.material);
 
-      const panelRadius = Math.max(5.6, 7.2 - Math.min(tiles.length, 100) * 0.015);
-      const panelWidth = Math.min(14.5, Math.max(11.0, panelRadius * 1.62));
-      const panelHeight = Math.min(9.8, Math.max(7.2, panelWidth * 0.78));
+      const icosaBaseEdge = 4 / Math.sqrt(10 + 2 * Math.sqrt(5));
+      const edgeLength = (icosaBaseEdge * sphereRadius * 0.992) / Math.pow(2, detail);
+      const baseTriangle = new THREE.BufferGeometry();
+      {
+        const a = edgeLength;
+        const h = (a * Math.sqrt(3)) / 2;
+        const vertices = new Float32Array([
+          0, (2 * h) / 3, 0,
+          -a / 2, -h / 3, 0,
+          a / 2, -h / 3, 0,
+        ]);
+        baseTriangle.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
+        baseTriangle.setIndex([0, 1, 2]);
+        baseTriangle.computeVertexNormals();
+      }
+      geometries.push(baseTriangle);
       const loader = new THREE.TextureLoader();
 
+      const temporaryUp = new THREE.Vector3(0, 1, 0);
+      const temporaryNormal = new THREE.Vector3();
+
       tiles.forEach((tile, index) => {
+        const face = faceData[index % faceData.length];
         const materialOptions: { map?: any; color: any } = { color: new THREE.Color(tile.color) };
         if (tile.thumbnailUrl) {
           const texture = loader.load(tile.thumbnailUrl);
@@ -436,18 +527,20 @@ function GlobeStage({
           materialOptions.map = texture;
         }
 
-        const material = new THREE.MeshBasicMaterial(materialOptions);
+        const material = new THREE.MeshBasicMaterial({ ...materialOptions, side: THREE.DoubleSide });
         materials.push(material);
 
-        const geometry = new THREE.PlaneGeometry(panelWidth, panelHeight, 1, 1);
-        geometries.push(geometry);
-
-        const mesh = new THREE.Mesh(geometry, material);
-        const position = fibonacciSpherePosition(index, tiles.length, panelRadius);
-        mesh.position.set(position.x, position.y, position.z);
-        mesh.lookAt(position.x * 2, position.y * 2, position.z * 2);
+        const mesh = new THREE.Mesh(baseTriangle, material);
+        const cx = face.center.x * sphereRadius;
+        const cy = face.center.y * sphereRadius;
+        const cz = face.center.z * sphereRadius;
+        mesh.position.set(cx, cy, cz);
+        temporaryNormal.set(face.normal.x, face.normal.y, face.normal.z);
+        const quaternion = new THREE.Quaternion().setFromUnitVectors(temporaryUp, temporaryNormal);
+        mesh.quaternion.copy(quaternion);
+        mesh.position.addScaledVector(temporaryNormal, 0.08);
         mesh.userData = { tile };
-        mesh.scale.setScalar(1.24);
+        mesh.scale.setScalar(1);
         scene.add(mesh);
         panels.push({ mesh, tile });
       });
@@ -689,8 +782,8 @@ function FutureOfCollaborationContent() {
                     {previewTile.projectUrl} ↗
                   </a>
                 ) : (
-                  <a className="mt-4 inline-block break-all font-mono text-sm text-[#00a8ff] hover:text-white" href="https://etok.zo.space/examples">
-                    https://etok.zo.space/examples
+                  <a className="mt-4 inline-block break-all font-mono text-sm text-[#00a8ff] hover:text-white" href="https://{{HANDLE}}.zo.space/examples">
+                    https://{{HANDLE}}.zo.space/examples
                   </a>
                 )}
               </div>
@@ -711,7 +804,6 @@ function FutureOfCollaborationContent() {
     </main>
   );
 }
-
 ```
 
 ## Variables
@@ -719,3 +811,4 @@ function FutureOfCollaborationContent() {
 | Placeholder | Description |
 |---|---|
 | `{{HANDLE}}` | Your zo.space handle (replaces `etok`) |
+
