@@ -175,6 +175,68 @@ function PortalIframe({ tile, scale }: { tile: Tile; scale: number }) {
   );
 }
 
+function brightenThumbnailTexture(
+  THREE: typeof import("https://esm.sh/three@0.167.1"),
+  texture: any,
+  renderer: any,
+) {
+  const image = texture.image as CanvasImageSource | undefined;
+  if (!image || typeof document === "undefined") return;
+  const width = "width" in image && image.width ? image.width : 512;
+  const height = "height" in image && image.height ? image.height : 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  ctx.filter = "brightness(12) contrast(1.35) saturate(1.5)";
+  ctx.drawImage(image, 0, 0, width, height);
+  ctx.filter = "none";
+  ctx.globalCompositeOperation = "screen";
+  ctx.fillStyle = "rgba(255,255,255,0.16)";
+  ctx.fillRect(0, 0, width, height);
+  ctx.globalCompositeOperation = "source-over";
+  const border = Math.max(4, Math.round(Math.min(width, height) * 0.018));
+  ctx.strokeStyle = "rgba(255,255,255,0.82)";
+  ctx.lineWidth = border;
+  ctx.strokeRect(border / 2, border / 2, width - border, height - border);
+  texture.image = canvas;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  texture.needsUpdate = true;
+}
+
+function makeGlobePlaceholderTexture(
+  THREE: typeof import("https://esm.sh/three@0.167.1"),
+  renderer: any,
+  color: string,
+  tileId: number,
+) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "rgba(255,255,255,0.18)";
+  ctx.fillRect(0, 0, canvas.width, 22);
+  ctx.fillRect(0, canvas.height - 22, canvas.width, 22);
+  ctx.strokeStyle = "rgba(255,255,255,0.8)";
+  ctx.lineWidth = 10;
+  ctx.strokeRect(5, 5, canvas.width - 10, canvas.height - 10);
+  ctx.fillStyle = "rgba(0,0,0,0.35)";
+  ctx.font = "bold 72px monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(String(tileId), canvas.width / 2, canvas.height / 2);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  texture.needsUpdate = true;
+  return texture;
+}
+
 const ICOSA_BASE = 0.5;
 const ICOSA_H = Math.sqrt(1 - ICOSA_BASE * ICOSA_BASE);
 
@@ -381,6 +443,9 @@ function GlobeStage({
     const geometries: Array<{ dispose: () => void }> = [];
     const panels: Array<{ mesh: any; tile: Tile }> = [];
     let renderer: any = null;
+    let overlayCanvas: HTMLCanvasElement | null = null;
+    let overlayContext: CanvasRenderingContext2D | null = null;
+    let threeLib: any = null;
     let controls: any = null;
     let scene: any = null;
     let camera: any = null;
@@ -424,6 +489,66 @@ function GlobeStage({
       window.open(hoveredPanel.tile.projectUrl, "_blank", "noopener,noreferrer");
     }
 
+    function drawOverlay() {
+      if (!overlayCanvas || !overlayContext || !scene || !camera || !threeLib) return;
+      const width = overlayCanvas.width;
+      const height = overlayCanvas.height;
+      overlayContext.clearRect(0, 0, width, height);
+      scene.updateMatrixWorld(true);
+      camera.updateMatrixWorld(true);
+      const ordered = panels
+        .map((entry) => {
+          const worldPosition = new threeLib.Vector3();
+          const worldQuaternion = new threeLib.Quaternion();
+          const worldScale = new threeLib.Vector3();
+          entry.mesh.matrixWorld.decompose(worldPosition, worldQuaternion, worldScale);
+          const positionAttribute = entry.mesh.geometry.getAttribute("position");
+          const points = [0, 1, 2].map((vertexIndex) => {
+            const point = new threeLib.Vector3(
+              positionAttribute.getX(vertexIndex),
+              positionAttribute.getY(vertexIndex),
+              positionAttribute.getZ(vertexIndex),
+            );
+            return point.applyQuaternion(worldQuaternion).multiply(worldScale).add(worldPosition);
+          });
+          const center = points.reduce((accumulator, point) => accumulator.add(point), new threeLib.Vector3()).multiplyScalar(1 / points.length);
+          return { entry, points, center };
+        })
+        .sort((left, right) => right.center.distanceTo(camera.position) - left.center.distanceTo(camera.position));
+
+      for (const { entry, points } of ordered) {
+        const projected = points.map((point) => point.clone().project(camera));
+        const screenPoints = projected.map((point) => ({
+          x: ((point.x + 1) / 2) * width,
+          y: ((-point.y + 1) / 2) * height,
+        }));
+        const minX = Math.min(...screenPoints.map((point) => point.x));
+        const maxX = Math.max(...screenPoints.map((point) => point.x));
+        const minY = Math.min(...screenPoints.map((point) => point.y));
+        const maxY = Math.max(...screenPoints.map((point) => point.y));
+        const image = entry.mesh.material?.map?.image as CanvasImageSource | undefined;
+        overlayContext.save();
+        overlayContext.beginPath();
+        overlayContext.moveTo(screenPoints[0].x, screenPoints[0].y);
+        overlayContext.lineTo(screenPoints[1].x, screenPoints[1].y);
+        overlayContext.lineTo(screenPoints[2].x, screenPoints[2].y);
+        overlayContext.closePath();
+        overlayContext.clip();
+        if (image) {
+          overlayContext.drawImage(image, minX, minY, maxX - minX, maxY - minY);
+        } else {
+          overlayContext.fillStyle = entry.tile.color;
+          overlayContext.fillRect(minX, minY, maxX - minX, maxY - minY);
+        }
+        overlayContext.globalAlpha = 0.35;
+        overlayContext.strokeStyle = "rgba(255,255,255,0.95)";
+        overlayContext.lineWidth = 2;
+        overlayContext.stroke();
+        overlayContext.globalAlpha = 1;
+        overlayContext.restore();
+      }
+    }
+
     const cleanup = () => {
       cancelled = true;
       cancelAnimationFrame(animationFrame);
@@ -446,6 +571,7 @@ function GlobeStage({
 
     async function start() {
       const THREE = await import("https://esm.sh/three@0.167.1");
+      threeLib = THREE;
       const { OrbitControls } = await import("https://esm.sh/three@0.167.1/examples/jsm/controls/OrbitControls?bundle");
       if (cancelled || !container) return;
 
@@ -458,6 +584,20 @@ function GlobeStage({
       renderer.setPixelRatio(Math.min(window.devicePixelRatio ?? 1, 2));
       renderer.setSize(container.clientWidth, container.clientHeight, false);
       container.appendChild(renderer.domElement);
+
+      overlayCanvas = document.createElement("canvas");
+      overlayCanvas.width = container.clientWidth;
+      overlayCanvas.height = container.clientHeight;
+      overlayCanvas.style.position = "absolute";
+      overlayCanvas.style.inset = "0";
+      overlayCanvas.style.pointerEvents = "none";
+      overlayCanvas.style.width = "100%";
+      overlayCanvas.style.height = "100%";
+      overlayCanvas.style.zIndex = "1";
+      overlayContext = overlayCanvas.getContext("2d");
+      if (overlayCanvas.parentNode !== container) {
+        container.appendChild(overlayCanvas);
+      }
 
       controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
@@ -507,27 +647,46 @@ function GlobeStage({
           a / 2, -h / 3, 0,
         ]);
         baseTriangle.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
+        baseTriangle.setAttribute(
+          "uv",
+          new THREE.Float32BufferAttribute([
+            0.5, 1,
+            0, 0,
+            1, 0,
+          ], 2),
+        );
         baseTriangle.setIndex([0, 1, 2]);
         baseTriangle.computeVertexNormals();
       }
       geometries.push(baseTriangle);
       const loader = new THREE.TextureLoader();
 
-      const temporaryUp = new THREE.Vector3(0, 1, 0);
+      const temporaryFaceNormal = new THREE.Vector3(0, 0, 1);
       const temporaryNormal = new THREE.Vector3();
 
       tiles.forEach((tile, index) => {
         const face = faceData[index % faceData.length];
-        const materialOptions: { map?: any; color: any } = { color: new THREE.Color(tile.color) };
+        const material = new THREE.MeshBasicMaterial({
+          color: tile.thumbnailUrl ? new THREE.Color(0xffffff) : new THREE.Color(tile.color),
+          side: THREE.DoubleSide,
+        });
         if (tile.thumbnailUrl) {
-          const texture = loader.load(tile.thumbnailUrl);
+          const placeholder = makeGlobePlaceholderTexture(THREE, renderer, tile.color, tile.id);
+          if (placeholder) {
+            textures.push(placeholder);
+            material.map = placeholder;
+          }
+          const texture = loader.load(tile.thumbnailUrl, (loadedTexture) => {
+            brightenThumbnailTexture(THREE, loadedTexture, renderer);
+            material.map = loadedTexture;
+            material.needsUpdate = true;
+          });
           texture.colorSpace = THREE.SRGBColorSpace;
           texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
           textures.push(texture);
-          materialOptions.map = texture;
+          material.map = texture;
+          material.needsUpdate = true;
         }
-
-        const material = new THREE.MeshBasicMaterial({ ...materialOptions, side: THREE.DoubleSide });
         materials.push(material);
 
         const mesh = new THREE.Mesh(baseTriangle, material);
@@ -536,7 +695,7 @@ function GlobeStage({
         const cz = face.center.z * sphereRadius;
         mesh.position.set(cx, cy, cz);
         temporaryNormal.set(face.normal.x, face.normal.y, face.normal.z);
-        const quaternion = new THREE.Quaternion().setFromUnitVectors(temporaryUp, temporaryNormal);
+        const quaternion = new THREE.Quaternion().setFromUnitVectors(temporaryFaceNormal, temporaryNormal);
         mesh.quaternion.copy(quaternion);
         mesh.position.addScaledVector(temporaryNormal, 0.08);
         mesh.userData = { tile };
@@ -550,6 +709,10 @@ function GlobeStage({
         const width = container.clientWidth;
         const height = container.clientHeight;
         renderer.setSize(width, height, false);
+        if (overlayCanvas) {
+          overlayCanvas.width = width;
+          overlayCanvas.height = height;
+        }
         camera.aspect = width / Math.max(1, height);
         camera.updateProjectionMatrix();
       };
@@ -566,6 +729,7 @@ function GlobeStage({
         if (cancelled) return;
         controls.update();
         renderer.render(scene, camera);
+        drawOverlay();
         animationFrame = window.requestAnimationFrame(tick);
       };
 
@@ -811,4 +975,3 @@ function FutureOfCollaborationContent() {
 | Placeholder | Description |
 |---|---|
 | `{{HANDLE}}` | Your zo.space handle (replaces `etok`) |
-
