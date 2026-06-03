@@ -452,8 +452,11 @@ function GlobeStage({
     const pointer = { x: 0, y: 0 };
 
     const pickQuadBands = (tileCount: number) => {
+      if (tileCount >= 80) {
+        return [10, 10, 10, 10, 10, 10, 10, 10];
+      }
       if (tileCount === 30) {
-        return [10, 10, 10];
+        return [4, 5, 6, 6, 5, 4];
       }
       const bandCount = Math.min(tileCount, Math.max(3, Math.round(Math.sqrt(tileCount / 1.2))));
       const bandWeights = Array.from({ length: bandCount }, (_, bandIndex) => {
@@ -510,7 +513,7 @@ function GlobeStage({
       THREE: typeof import("https://esm.sh/three@0.167.1"),
       points: Array<{ x: number; y: number; z: number }>,
       radius: number,
-      segments = 3,
+      segments = 8,
     ) => {
       const positions: number[] = [];
       const uvs: number[] = [];
@@ -638,15 +641,21 @@ function GlobeStage({
       scene.add(backLight);
 
       const bandCounts = pickQuadBands(tiles.length);
+      const bandLatitudes = Array.from({ length: bandCounts.length + 1 }, (_, index) => {
+        const y = -1 + (index / bandCounts.length) * 2;
+        return Math.asin(Math.max(-1, Math.min(1, y)));
+      });
       const sphereRadius = 15.5;
       const loader = new THREE.TextureLoader();
 
       let tileIndex = 0;
       bandCounts.forEach((bandCount, bandIndex) => {
-        const latitude0 = -Math.PI / 2 + (bandIndex / bandCounts.length) * Math.PI;
-        const latitude1 = -Math.PI / 2 + ((bandIndex + 1) / bandCounts.length) * Math.PI;
+        const latitude0 = bandLatitudes[bandIndex];
+        const latitude1 = bandLatitudes[bandIndex + 1];
         const longitudeStep = (Math.PI * 2) / bandCount;
         const longitudeOffset = bandIndex % 2 === 0 ? 0 : longitudeStep / 2;
+        const bandWarpStrength = 0.16 * Math.cos(((bandIndex + 0.5) / bandCounts.length - 0.5) * Math.PI);
+        const latitudeWarp = (longitude: number) => Math.sin(longitude * 2 + bandIndex * 0.55) * bandWarpStrength;
 
         for (let column = 0; column < bandCount && tileIndex < tiles.length; column += 1, tileIndex += 1) {
           const tile = tiles[tileIndex];
@@ -654,13 +663,13 @@ function GlobeStage({
           const longitude1 = longitude0 + longitudeStep;
 
           const points = [
-            spherePoint(sphereRadius, latitude0, longitude0),
-            spherePoint(sphereRadius, latitude0, longitude1),
-            spherePoint(sphereRadius, latitude1, longitude1),
-            spherePoint(sphereRadius, latitude1, longitude0),
+            spherePoint(sphereRadius, latitude0 + latitudeWarp(longitude0), longitude0),
+            spherePoint(sphereRadius, latitude0 + latitudeWarp(longitude1), longitude1),
+            spherePoint(sphereRadius, latitude1 + latitudeWarp(longitude1), longitude1),
+            spherePoint(sphereRadius, latitude1 + latitudeWarp(longitude0), longitude0),
           ];
 
-          const geometry = buildCurvedTileGeometry(THREE, points, sphereRadius, 3);
+          const geometry = buildCurvedTileGeometry(THREE, points, sphereRadius, 8);
           geometries.push(geometry);
 
           const material = new THREE.MeshBasicMaterial({
@@ -690,6 +699,16 @@ function GlobeStage({
           const mesh = new THREE.Mesh(geometry, material);
           mesh.userData = { tile };
           scene.add(mesh);
+          const wireframeGeometry = new THREE.WireframeGeometry(geometry);
+          geometries.push(wireframeGeometry);
+          const wireframeMaterial = new THREE.LineBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.22,
+          });
+          materials.push(wireframeMaterial);
+          const wireframe = new THREE.LineSegments(wireframeGeometry, wireframeMaterial);
+          scene.add(wireframe);
           const outlineGeometry = new THREE.BufferGeometry().setFromPoints(
             points.map((point) => new THREE.Vector3(point.x, point.y, point.z)),
           );
@@ -783,6 +802,7 @@ function FutureOfCollaborationContent() {
   }, [gridSize, viewMode, debugMode]);
 
   const tiles = useMemo(() => buildTiles(gridSize), [gridSize]);
+  const globeTiles = useMemo(() => (viewMode === "globe" ? buildTiles(Math.max(gridSize, 80)) : tiles), [gridSize, tiles, viewMode]);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   const [lruIds, setLruIds] = useState<number[]>([]);
 
@@ -916,7 +936,7 @@ function FutureOfCollaborationContent() {
               ))}
             </div>
           ) : (
-            <GlobeStage tiles={tiles} onHover={handleHover} />
+            <GlobeStage tiles={globeTiles} onHover={handleHover} />
           )}
 
           <footer className="grid gap-px bg-[#151515] md:grid-cols-[1fr_1fr]">
