@@ -417,6 +417,7 @@ function TileCard({
   );
 }
 
+
 function GlobeStage({
   tiles,
   onHover,
@@ -443,15 +444,123 @@ function GlobeStage({
     const geometries: Array<{ dispose: () => void }> = [];
     const panels: Array<{ mesh: any; tile: Tile }> = [];
     let renderer: any = null;
-    let overlayCanvas: HTMLCanvasElement | null = null;
-    let overlayContext: CanvasRenderingContext2D | null = null;
-    let threeLib: any = null;
     let controls: any = null;
     let scene: any = null;
     let camera: any = null;
     let raycaster: any = null;
     let hoveredPanel: { mesh: any; tile: Tile } | null = null;
     const pointer = { x: 0, y: 0 };
+
+    const pickQuadBands = (tileCount: number) => {
+      if (tileCount === 30) {
+        return [10, 10, 10];
+      }
+      const bandCount = Math.min(tileCount, Math.max(3, Math.round(Math.sqrt(tileCount / 1.2))));
+      const bandWeights = Array.from({ length: bandCount }, (_, bandIndex) => {
+        const topY = 1 - (bandIndex / bandCount) * 2;
+        const bottomY = 1 - ((bandIndex + 1) / bandCount) * 2;
+        const centerY = (topY + bottomY) / 2;
+        return Math.max(0.18, Math.sqrt(Math.max(0, 1 - centerY * centerY)));
+      });
+      const totalWeight = bandWeights.reduce((sum, weight) => sum + weight, 0);
+      const rawCounts = bandWeights.map((weight) => (weight / totalWeight) * tileCount);
+      const counts = rawCounts.map((count) => Math.max(1, Math.floor(count)));
+      let remainder = tileCount - counts.reduce((sum, count) => sum + count, 0);
+      const order = rawCounts
+        .map((count, index) => ({ fraction: count - Math.floor(count), index }))
+        .sort((left, right) => right.fraction - left.fraction);
+      let cursor = 0;
+      while (remainder > 0) {
+        counts[order[cursor % order.length].index] += 1;
+        remainder -= 1;
+        cursor += 1;
+      }
+      return counts;
+    };
+
+    const spherePoint = (radius: number, latitude: number, longitude: number) => {
+      const cosLatitude = Math.cos(latitude);
+      return {
+        x: cosLatitude * Math.cos(longitude) * radius,
+        y: Math.sin(latitude) * radius,
+        z: cosLatitude * Math.sin(longitude) * radius,
+      };
+    };
+
+    const mixPoint = (
+      a: { x: number; y: number; z: number },
+      b: { x: number; y: number; z: number },
+      t: number,
+    ) => ({
+      x: a.x + (b.x - a.x) * t,
+      y: a.y + (b.y - a.y) * t,
+      z: a.z + (b.z - a.z) * t,
+    });
+
+    const normalizePoint = (point: { x: number; y: number; z: number }, radius: number) => {
+      const length = Math.hypot(point.x, point.y, point.z) || 1;
+      return {
+        x: (point.x / length) * radius,
+        y: (point.y / length) * radius,
+        z: (point.z / length) * radius,
+      };
+    };
+
+    const buildCurvedTileGeometry = (
+      THREE: typeof import("https://esm.sh/three@0.167.1"),
+      points: Array<{ x: number; y: number; z: number }>,
+      radius: number,
+      segments = 3,
+    ) => {
+      const positions: number[] = [];
+      const uvs: number[] = [];
+      const indices: number[] = [];
+      const stride = segments + 1;
+
+      for (let row = 0; row <= segments; row += 1) {
+        const v = row / segments;
+        const left = mixPoint(points[0], points[3], v);
+        const right = mixPoint(points[1], points[2], v);
+        for (let column = 0; column <= segments; column += 1) {
+          const u = column / segments;
+          const point = normalizePoint(mixPoint(left, right, u), radius);
+          positions.push(point.x, point.y, point.z);
+          uvs.push(u, 1 - v);
+        }
+      }
+
+      for (let row = 0; row < segments; row += 1) {
+        for (let column = 0; column < segments; column += 1) {
+          const index = row * stride + column;
+          indices.push(index, index + 1, index + stride + 1, index, index + stride + 1, index + stride);
+        }
+      }
+
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+      geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+      geometry.setIndex(indices);
+      geometry.computeVertexNormals();
+      return geometry;
+    };
+
+    const cleanup = () => {
+      cancelled = true;
+      cancelAnimationFrame(animationFrame);
+      resizeObserver?.disconnect();
+      if (renderer) {
+        renderer.domElement.removeEventListener("pointermove", handlePointerMove);
+        renderer.domElement.removeEventListener("pointerleave", handlePointerLeave);
+        renderer.domElement.removeEventListener("click", handleClick);
+      }
+      controls?.dispose?.();
+      for (const material of materials) material.dispose?.();
+      for (const geometry of geometries) geometry.dispose?.();
+      for (const texture of textures) texture.dispose?.();
+      renderer?.dispose?.();
+      if (renderer?.domElement?.parentNode === container) container.removeChild(renderer.domElement);
+      onHoverRef.current(null);
+    };
 
     function setHoveredPanel(nextPanel: { mesh: any; tile: Tile } | null) {
       if (hoveredPanel?.mesh === nextPanel?.mesh) return;
@@ -460,8 +569,10 @@ function GlobeStage({
       if (hoveredPanel) {
         hoveredPanel.mesh.scale.setScalar(1.12);
         onHoverRef.current(hoveredPanel.tile);
+        if (renderer?.domElement) renderer.domElement.style.cursor = "pointer";
       } else {
         onHoverRef.current(null);
+        if (renderer?.domElement) renderer.domElement.style.cursor = "grab";
       }
     }
 
@@ -489,89 +600,8 @@ function GlobeStage({
       window.open(hoveredPanel.tile.projectUrl, "_blank", "noopener,noreferrer");
     }
 
-    function drawOverlay() {
-      if (!overlayCanvas || !overlayContext || !scene || !camera || !threeLib) return;
-      const width = overlayCanvas.width;
-      const height = overlayCanvas.height;
-      overlayContext.clearRect(0, 0, width, height);
-      scene.updateMatrixWorld(true);
-      camera.updateMatrixWorld(true);
-      const ordered = panels
-        .map((entry) => {
-          const worldPosition = new threeLib.Vector3();
-          const worldQuaternion = new threeLib.Quaternion();
-          const worldScale = new threeLib.Vector3();
-          entry.mesh.matrixWorld.decompose(worldPosition, worldQuaternion, worldScale);
-          const positionAttribute = entry.mesh.geometry.getAttribute("position");
-          const points = [0, 1, 2].map((vertexIndex) => {
-            const point = new threeLib.Vector3(
-              positionAttribute.getX(vertexIndex),
-              positionAttribute.getY(vertexIndex),
-              positionAttribute.getZ(vertexIndex),
-            );
-            return point.applyQuaternion(worldQuaternion).multiply(worldScale).add(worldPosition);
-          });
-          const center = points.reduce((accumulator, point) => accumulator.add(point), new threeLib.Vector3()).multiplyScalar(1 / points.length);
-          return { entry, points, center };
-        })
-        .sort((left, right) => right.center.distanceTo(camera.position) - left.center.distanceTo(camera.position));
-
-      for (const { entry, points } of ordered) {
-        const projected = points.map((point) => point.clone().project(camera));
-        const screenPoints = projected.map((point) => ({
-          x: ((point.x + 1) / 2) * width,
-          y: ((-point.y + 1) / 2) * height,
-        }));
-        const minX = Math.min(...screenPoints.map((point) => point.x));
-        const maxX = Math.max(...screenPoints.map((point) => point.x));
-        const minY = Math.min(...screenPoints.map((point) => point.y));
-        const maxY = Math.max(...screenPoints.map((point) => point.y));
-        const image = entry.mesh.material?.map?.image as CanvasImageSource | undefined;
-        overlayContext.save();
-        overlayContext.beginPath();
-        overlayContext.moveTo(screenPoints[0].x, screenPoints[0].y);
-        overlayContext.lineTo(screenPoints[1].x, screenPoints[1].y);
-        overlayContext.lineTo(screenPoints[2].x, screenPoints[2].y);
-        overlayContext.closePath();
-        overlayContext.clip();
-        if (image) {
-          overlayContext.drawImage(image, minX, minY, maxX - minX, maxY - minY);
-        } else {
-          overlayContext.fillStyle = entry.tile.color;
-          overlayContext.fillRect(minX, minY, maxX - minX, maxY - minY);
-        }
-        overlayContext.globalAlpha = 0.35;
-        overlayContext.strokeStyle = "rgba(255,255,255,0.95)";
-        overlayContext.lineWidth = 2;
-        overlayContext.stroke();
-        overlayContext.globalAlpha = 1;
-        overlayContext.restore();
-      }
-    }
-
-    const cleanup = () => {
-      cancelled = true;
-      cancelAnimationFrame(animationFrame);
-      resizeObserver?.disconnect();
-      if (renderer) {
-        renderer.domElement.removeEventListener("pointermove", handlePointerMove);
-        renderer.domElement.removeEventListener("pointerleave", handlePointerLeave);
-        renderer.domElement.removeEventListener("click", handleClick);
-      }
-      controls?.dispose?.();
-      for (const material of materials) material.dispose?.();
-      for (const geometry of geometries) geometry.dispose?.();
-      for (const texture of textures) texture.dispose?.();
-      renderer?.dispose?.();
-      if (renderer?.domElement?.parentNode === container) {
-        container.removeChild(renderer.domElement);
-      }
-      onHoverRef.current(null);
-    };
-
     async function start() {
       const THREE = await import("https://esm.sh/three@0.167.1");
-      threeLib = THREE;
       const { OrbitControls } = await import("https://esm.sh/three@0.167.1/examples/jsm/controls/OrbitControls?bundle");
       if (cancelled || !container) return;
 
@@ -583,21 +613,9 @@ function GlobeStage({
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio ?? 1, 2));
       renderer.setSize(container.clientWidth, container.clientHeight, false);
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.domElement.style.cursor = "grab";
       container.appendChild(renderer.domElement);
-
-      overlayCanvas = document.createElement("canvas");
-      overlayCanvas.width = container.clientWidth;
-      overlayCanvas.height = container.clientHeight;
-      overlayCanvas.style.position = "absolute";
-      overlayCanvas.style.inset = "0";
-      overlayCanvas.style.pointerEvents = "none";
-      overlayCanvas.style.width = "100%";
-      overlayCanvas.style.height = "100%";
-      overlayCanvas.style.zIndex = "1";
-      overlayContext = overlayCanvas.getContext("2d");
-      if (overlayCanvas.parentNode !== container) {
-        container.appendChild(overlayCanvas);
-      }
 
       controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
@@ -619,90 +637,73 @@ function GlobeStage({
       backLight.position.set(-12, -8, -10);
       scene.add(backLight);
 
-      const detail = pickIcoDetail(tiles.length);
-      const faceData = buildIcoSphereFaces(detail);
-      const globeTiles = faceData.map((_, index) => tiles[index % tiles.length]);
-      const sphereRadius = Math.max(11, 18 - detail * 1.6);
-      const core = new THREE.Mesh(
-        new THREE.IcosahedronGeometry(sphereRadius + 0.05, 1),
-        new THREE.MeshBasicMaterial({
-          color: 0x0f1720,
-          wireframe: true,
-          transparent: true,
-          opacity: 0.16,
-        }),
-      );
-      scene.add(core);
-      geometries.push(core.geometry);
-      materials.push(core.material);
-
-      const icosaBaseEdge = 4 / Math.sqrt(10 + 2 * Math.sqrt(5));
-      const edgeLength = (icosaBaseEdge * sphereRadius * 0.992) / Math.pow(2, detail);
-      const baseTriangle = new THREE.BufferGeometry();
-      {
-        const a = edgeLength;
-        const h = (a * Math.sqrt(3)) / 2;
-        const vertices = new Float32Array([
-          0, (2 * h) / 3, 0,
-          -a / 2, -h / 3, 0,
-          a / 2, -h / 3, 0,
-        ]);
-        baseTriangle.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
-        baseTriangle.setAttribute(
-          "uv",
-          new THREE.Float32BufferAttribute([
-            0.5, 1,
-            0, 0,
-            1, 0,
-          ], 2),
-        );
-        baseTriangle.setIndex([0, 1, 2]);
-        baseTriangle.computeVertexNormals();
-      }
-      geometries.push(baseTriangle);
+      const bandCounts = pickQuadBands(tiles.length);
+      const sphereRadius = 15.5;
       const loader = new THREE.TextureLoader();
 
-      const temporaryFaceNormal = new THREE.Vector3(0, 0, 1);
-      const temporaryNormal = new THREE.Vector3();
+      let tileIndex = 0;
+      bandCounts.forEach((bandCount, bandIndex) => {
+        const latitude0 = -Math.PI / 2 + (bandIndex / bandCounts.length) * Math.PI;
+        const latitude1 = -Math.PI / 2 + ((bandIndex + 1) / bandCounts.length) * Math.PI;
+        const longitudeStep = (Math.PI * 2) / bandCount;
+        const longitudeOffset = bandIndex % 2 === 0 ? 0 : longitudeStep / 2;
 
-      globeTiles.forEach((tile, index) => {
-        const face = faceData[index];
-        const material = new THREE.MeshBasicMaterial({
-          color: tile.thumbnailUrl ? new THREE.Color(0xffffff) : new THREE.Color(tile.color),
-          side: THREE.DoubleSide,
-        });
-        if (tile.thumbnailUrl) {
-          const placeholder = makeGlobePlaceholderTexture(THREE, renderer, tile.color, tile.id);
-          if (placeholder) {
-            textures.push(placeholder);
-            material.map = placeholder;
-          }
-          const texture = loader.load(tile.thumbnailUrl, (loadedTexture) => {
-            brightenThumbnailTexture(THREE, loadedTexture, renderer);
-            material.map = loadedTexture;
-            material.needsUpdate = true;
+        for (let column = 0; column < bandCount && tileIndex < tiles.length; column += 1, tileIndex += 1) {
+          const tile = tiles[tileIndex];
+          const longitude0 = -Math.PI + longitudeOffset + column * longitudeStep;
+          const longitude1 = longitude0 + longitudeStep;
+
+          const points = [
+            spherePoint(sphereRadius, latitude0, longitude0),
+            spherePoint(sphereRadius, latitude0, longitude1),
+            spherePoint(sphereRadius, latitude1, longitude1),
+            spherePoint(sphereRadius, latitude1, longitude0),
+          ];
+
+          const geometry = buildCurvedTileGeometry(THREE, points, sphereRadius, 3);
+          geometries.push(geometry);
+
+          const material = new THREE.MeshBasicMaterial({
+            color: tile.thumbnailUrl ? 0xffffff : new THREE.Color(tile.color),
+            side: THREE.DoubleSide,
           });
-          texture.colorSpace = THREE.SRGBColorSpace;
-          texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-          textures.push(texture);
-          material.map = texture;
-          material.needsUpdate = true;
-        }
-        materials.push(material);
+          materials.push(material);
 
-        const mesh = new THREE.Mesh(baseTriangle, material);
-        const cx = face.center.x * sphereRadius;
-        const cy = face.center.y * sphereRadius;
-        const cz = face.center.z * sphereRadius;
-        mesh.position.set(cx, cy, cz);
-        temporaryNormal.set(face.normal.x, face.normal.y, face.normal.z);
-        const quaternion = new THREE.Quaternion().setFromUnitVectors(temporaryFaceNormal, temporaryNormal);
-        mesh.quaternion.copy(quaternion);
-        mesh.position.addScaledVector(temporaryNormal, 0.08);
-        mesh.userData = { tile };
-        mesh.scale.setScalar(1);
-        scene.add(mesh);
-        panels.push({ mesh, tile });
+          if (tile.thumbnailUrl) {
+            const placeholder = makeGlobePlaceholderTexture(THREE, renderer, tile.color, tile.id);
+            if (placeholder) {
+              textures.push(placeholder);
+              material.map = placeholder;
+            }
+            const texture = loader.load(tile.thumbnailUrl, (loadedTexture) => {
+              brightenThumbnailTexture(THREE, loadedTexture, renderer);
+              material.map = loadedTexture;
+              material.needsUpdate = true;
+            });
+            texture.colorSpace = THREE.SRGBColorSpace;
+            texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+            textures.push(texture);
+            material.map = texture;
+            material.needsUpdate = true;
+          }
+
+          const mesh = new THREE.Mesh(geometry, material);
+          mesh.userData = { tile };
+          scene.add(mesh);
+          const outlineGeometry = new THREE.BufferGeometry().setFromPoints(
+            points.map((point) => new THREE.Vector3(point.x, point.y, point.z)),
+          );
+          geometries.push(outlineGeometry);
+          const outlineMaterial = new THREE.LineBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.42,
+          });
+          materials.push(outlineMaterial);
+          const outline = new THREE.LineLoop(outlineGeometry, outlineMaterial);
+          scene.add(outline);
+          panels.push({ mesh, tile });
+        }
       });
 
       const resize = () => {
@@ -710,10 +711,6 @@ function GlobeStage({
         const width = container.clientWidth;
         const height = container.clientHeight;
         renderer.setSize(width, height, false);
-        if (overlayCanvas) {
-          overlayCanvas.width = width;
-          overlayCanvas.height = height;
-        }
         camera.aspect = width / Math.max(1, height);
         camera.updateProjectionMatrix();
       };
@@ -730,7 +727,6 @@ function GlobeStage({
         if (cancelled) return;
         controls.update();
         renderer.render(scene, camera);
-        drawOverlay();
         animationFrame = window.requestAnimationFrame(tick);
       };
 
