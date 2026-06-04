@@ -426,6 +426,7 @@ function GlobeStage({
   onHover: (tile: Tile | null) => void;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const overlayRootRef = useRef<HTMLDivElement | null>(null);
   const onHoverRef = useRef(onHover);
 
   useEffect(() => {
@@ -434,7 +435,8 @@ function GlobeStage({
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || typeof window === "undefined") return;
+    const overlayRoot = overlayRootRef.current;
+    if (!container || !overlayRoot || typeof window === "undefined") return;
 
     let cancelled = false;
     let animationFrame = 0;
@@ -442,8 +444,12 @@ function GlobeStage({
     const textures: Array<{ dispose: () => void }> = [];
     const materials: Array<{ dispose: () => void }> = [];
     const geometries: Array<{ dispose: () => void }> = [];
-    const panels: Array<{ mesh: any; tile: Tile }> = [];
+    const panels: Array<{ mesh: any; tile: Tile; points: Array<{ x: number; y: number; z: number }> }> = [];
     let renderer: any = null;
+    let overlayCanvas: HTMLCanvasElement | null = null;
+    let overlayContext: CanvasRenderingContext2D | null = null;
+    let overlaySvg: SVGSVGElement | null = null;
+    let overlayDom: HTMLDivElement | null = null;
     let controls: any = null;
     let scene: any = null;
     let camera: any = null;
@@ -456,7 +462,7 @@ function GlobeStage({
         return [10, 10, 10, 10, 10, 10, 10, 10];
       }
       if (tileCount === 30) {
-        return [4, 5, 6, 6, 5, 4];
+        return [6, 6, 6, 6, 6];
       }
       const bandCount = Math.min(tileCount, Math.max(3, Math.round(Math.sqrt(tileCount / 1.2))));
       const bandWeights = Array.from({ length: bandCount }, (_, bandIndex) => {
@@ -513,7 +519,7 @@ function GlobeStage({
       THREE: typeof import("https://esm.sh/three@0.167.1"),
       points: Array<{ x: number; y: number; z: number }>,
       radius: number,
-      segments = 8,
+      segments = 1,
     ) => {
       const positions: number[] = [];
       const uvs: number[] = [];
@@ -561,7 +567,10 @@ function GlobeStage({
       for (const geometry of geometries) geometry.dispose?.();
       for (const texture of textures) texture.dispose?.();
       renderer?.dispose?.();
-      if (renderer?.domElement?.parentNode === container) container.removeChild(renderer.domElement);
+      if (renderer?.domElement?.parentNode === overlayRoot) overlayRoot.removeChild(renderer.domElement);
+      overlayCanvas?.remove();
+      overlaySvg?.remove();
+      overlayDom?.remove();
       onHoverRef.current(null);
     };
 
@@ -603,6 +612,108 @@ function GlobeStage({
       window.open(hoveredPanel.tile.projectUrl, "_blank", "noopener,noreferrer");
     }
 
+    function drawOverlay(THREE: typeof import("https://esm.sh/three@0.167.1")) {
+      if (!overlayContext || !camera || !overlayCanvas) return;
+      const width = overlayCanvas.clientWidth || overlayCanvas.width;
+      const height = overlayCanvas.clientHeight || overlayCanvas.height;
+      const pixelRatio = overlayCanvas.width / Math.max(1, width);
+      if (overlaySvg) {
+        overlaySvg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+        overlaySvg.setAttribute("width", String(width));
+        overlaySvg.setAttribute("height", String(height));
+        overlaySvg.innerHTML = "";
+        const debugRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        debugRect.setAttribute("x", "20");
+        debugRect.setAttribute("y", "20");
+        debugRect.setAttribute("width", "28");
+        debugRect.setAttribute("height", "28");
+        debugRect.setAttribute("fill", "rgba(255,0,0,0.92)");
+        debugRect.setAttribute("stroke", "white");
+        debugRect.setAttribute("stroke-width", "2");
+        overlaySvg.appendChild(debugRect);
+      }
+      if (overlayDom) overlayDom.innerHTML = "";
+      overlayContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      overlayContext.clearRect(0, 0, width, height);
+      overlayContext.globalCompositeOperation = "source-over";
+      overlayContext.lineJoin = "miter";
+      overlayContext.lineCap = "butt";
+      for (const panel of panels) {
+        const projected = panel.points.map((point) => {
+          const vector = new THREE.Vector3(point.x, point.y, point.z).project(camera);
+          return {
+            x: ((vector.x + 1) * 0.5) * width,
+            y: ((1 - vector.y) * 0.5) * height,
+          };
+        });
+        overlayContext.beginPath();
+        overlayContext.moveTo(projected[0].x, projected[0].y);
+        for (let index = 1; index < projected.length; index += 1) overlayContext.lineTo(projected[index].x, projected[index].y);
+        overlayContext.closePath();
+        overlayContext.fillStyle = "rgba(8, 15, 28, 0.74)";
+        overlayContext.fill();
+        overlayContext.shadowColor = "rgba(112, 183, 255, 0.22)";
+        overlayContext.shadowBlur = 8;
+        overlayContext.strokeStyle = "rgba(255,255,255,0.18)";
+        overlayContext.lineWidth = 5.5;
+        overlayContext.stroke();
+        overlayContext.shadowBlur = 0;
+        overlayContext.strokeStyle = "rgba(244, 254, 255, 0.96)";
+        overlayContext.lineWidth = 1.45;
+        overlayContext.stroke();
+
+        if (overlaySvg) {
+          const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+          polygon.setAttribute("points", projected.map((point) => `${point.x},${point.y}`).join(" "));
+          polygon.setAttribute(
+            "fill",
+            `rgba(${Number.parseInt(panel.tile.color.slice(1, 3), 16)}, ${Number.parseInt(panel.tile.color.slice(3, 5), 16)}, ${Number.parseInt(panel.tile.color.slice(5, 7), 16)}, 0.92)`,
+          );
+          polygon.setAttribute("stroke", "rgba(255,255,255,0.96)");
+          polygon.setAttribute("stroke-width", "1.6");
+          polygon.setAttribute("vector-effect", "non-scaling-stroke");
+          polygon.setAttribute("paint-order", "stroke fill");
+          overlaySvg.appendChild(polygon);
+
+          if (panel.tile.thumbnailUrl) {
+            const defs = overlaySvg.querySelector("defs") ?? document.createElementNS("http://www.w3.org/2000/svg", "defs");
+            if (!defs.parentNode) overlaySvg.appendChild(defs);
+            let clipPath = overlaySvg.querySelector(`#clip-${panel.tile.id}`) as SVGClipPathElement | null;
+            if (!clipPath) {
+              clipPath = document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
+              clipPath.id = `clip-${panel.tile.id}`;
+              const clipPolygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+              clipPolygon.setAttribute("points", projected.map((point) => `${point.x},${point.y}`).join(" "));
+              clipPath.appendChild(clipPolygon);
+              defs.appendChild(clipPath);
+            }
+            const image = document.createElementNS("http://www.w3.org/2000/svg", "image");
+            image.setAttribute("href", panel.tile.thumbnailUrl);
+            image.setAttribute("width", String(width));
+            image.setAttribute("height", String(height));
+            image.setAttribute("preserveAspectRatio", "xMidYMid slice");
+            image.setAttribute("clip-path", `url(#clip-${panel.tile.id})`);
+            image.setAttribute("opacity", "0.98");
+            overlaySvg.appendChild(image);
+          }
+        } else if (overlayDom) {
+          const layer = document.createElement("div");
+          layer.style.position = "absolute";
+          layer.style.inset = "0";
+          layer.style.clipPath = `polygon(${projected.map((point) => `${point.x}px ${point.y}px`).join(", ")})`;
+          layer.style.backgroundImage = panel.tile.thumbnailUrl
+            ? `linear-gradient(rgba(255,255,255,.12), rgba(0,0,0,.18)), url(${panel.tile.thumbnailUrl})`
+            : `linear-gradient(135deg, ${panel.tile.color}, ${panel.tile.color})`;
+          layer.style.backgroundSize = "cover";
+          layer.style.backgroundPosition = "center";
+          layer.style.filter = "contrast(1.08) brightness(1.02) saturate(1.12)";
+          layer.style.boxShadow = "inset 0 0 0 1.5px rgba(255,255,255,0.92), inset 0 0 0 6px rgba(10,15,24,0.72)";
+          layer.style.opacity = "0.98";
+          overlayDom.appendChild(layer);
+        }
+      }
+    }
+
     async function start() {
       const THREE = await import("https://esm.sh/three@0.167.1");
       const { OrbitControls } = await import("https://esm.sh/three@0.167.1/examples/jsm/controls/OrbitControls?bundle");
@@ -611,20 +722,49 @@ function GlobeStage({
       scene = new THREE.Scene();
       scene.background = new THREE.Color("#111111");
       camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
-      camera.position.set(0, 0, 36);
+      camera.position.set(0, 0, 28);
 
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio ?? 1, 2));
       renderer.setSize(container.clientWidth, container.clientHeight, false);
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.domElement.style.cursor = "grab";
-      container.appendChild(renderer.domElement);
+      renderer.domElement.style.position = "absolute";
+      renderer.domElement.style.inset = "0";
+      renderer.domElement.style.zIndex = "1";
+      overlayRoot.appendChild(renderer.domElement);
+      overlayCanvas = document.createElement("canvas");
+      overlayCanvas.style.position = "absolute";
+      overlayCanvas.style.inset = "0";
+      overlayCanvas.style.zIndex = "20";
+      overlayCanvas.style.pointerEvents = "none";
+      overlayRoot.appendChild(overlayCanvas);
+      overlayContext = overlayCanvas.getContext("2d");
+      overlaySvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      overlaySvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      overlaySvg.setAttribute("preserveAspectRatio", "none");
+      overlaySvg.style.position = "absolute";
+      overlaySvg.style.inset = "0";
+      overlaySvg.style.zIndex = "30";
+      overlaySvg.style.pointerEvents = "none";
+      overlaySvg.style.mixBlendMode = "normal";
+      overlaySvg.style.filter = "drop-shadow(0 0 6px rgba(112, 183, 255, 0.22))";
+      overlaySvg.style.opacity = "1";
+      overlaySvg.style.display = "block";
+      overlaySvg.setAttribute("shape-rendering", "crispEdges");
+      overlayRoot.appendChild(overlaySvg);
+      overlayDom = document.createElement("div");
+      overlayDom.style.position = "absolute";
+      overlayDom.style.inset = "0";
+      overlayDom.style.zIndex = "40";
+      overlayDom.style.pointerEvents = "none";
+      overlayRoot.appendChild(overlayDom);
 
       controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.07;
-      controls.minDistance = 16;
-      controls.maxDistance = 44;
+      controls.minDistance = 12;
+      controls.maxDistance = 36;
       controls.autoRotate = true;
       controls.autoRotateSpeed = 0.4;
       controls.target.set(0, 0, 0);
@@ -645,7 +785,7 @@ function GlobeStage({
         const y = -1 + (index / bandCounts.length) * 2;
         return Math.asin(Math.max(-1, Math.min(1, y)));
       });
-      const sphereRadius = 15.5;
+      const sphereRadius = 20.5;
       const loader = new THREE.TextureLoader();
 
       let tileIndex = 0;
@@ -654,8 +794,8 @@ function GlobeStage({
         const latitude1 = bandLatitudes[bandIndex + 1];
         const longitudeStep = (Math.PI * 2) / bandCount;
         const longitudeOffset = bandIndex % 2 === 0 ? 0 : longitudeStep / 2;
-        const bandWarpStrength = 0.16 * Math.cos(((bandIndex + 0.5) / bandCounts.length - 0.5) * Math.PI);
-        const latitudeWarp = (longitude: number) => Math.sin(longitude * 2 + bandIndex * 0.55) * bandWarpStrength;
+        const bandWarpStrength = tileCount === 30 ? 0 : 0.08 * Math.cos(((bandIndex + 0.5) / bandCounts.length - 0.5) * Math.PI);
+        const latitudeWarp = bandWarpStrength === 0 ? () => 0 : (longitude: number) => Math.sin(longitude * 2 + bandIndex * 0.55) * bandWarpStrength;
 
         for (let column = 0; column < bandCount && tileIndex < tiles.length; column += 1, tileIndex += 1) {
           const tile = tiles[tileIndex];
@@ -669,7 +809,7 @@ function GlobeStage({
             spherePoint(sphereRadius, latitude1 + latitudeWarp(longitude0), longitude0),
           ];
 
-          const geometry = buildCurvedTileGeometry(THREE, points, sphereRadius, 8);
+          const geometry = buildCurvedTileGeometry(THREE, points, sphereRadius, 1);
           geometries.push(geometry);
 
           const material = new THREE.MeshBasicMaterial({
@@ -698,30 +838,11 @@ function GlobeStage({
 
           const mesh = new THREE.Mesh(geometry, material);
           mesh.userData = { tile };
+          mesh.renderOrder = 1;
           scene.add(mesh);
-          const wireframeGeometry = new THREE.WireframeGeometry(geometry);
-          geometries.push(wireframeGeometry);
-          const wireframeMaterial = new THREE.LineBasicMaterial({
-            color: 0xffffff,
-            transparent: true,
-            opacity: 0.22,
-          });
-          materials.push(wireframeMaterial);
-          const wireframe = new THREE.LineSegments(wireframeGeometry, wireframeMaterial);
-          scene.add(wireframe);
-          const outlineGeometry = new THREE.BufferGeometry().setFromPoints(
-            points.map((point) => new THREE.Vector3(point.x, point.y, point.z)),
-          );
-          geometries.push(outlineGeometry);
-          const outlineMaterial = new THREE.LineBasicMaterial({
-            color: 0xffffff,
-            transparent: true,
-            opacity: 0.42,
-          });
-          materials.push(outlineMaterial);
-          const outline = new THREE.LineLoop(outlineGeometry, outlineMaterial);
-          scene.add(outline);
-          panels.push({ mesh, tile });
+          const seamGeometry = geometry.clone();
+          geometries.push(seamGeometry);
+          panels.push({ mesh, tile, points });
         }
       });
 
@@ -730,6 +851,13 @@ function GlobeStage({
         const width = container.clientWidth;
         const height = container.clientHeight;
         renderer.setSize(width, height, false);
+        if (overlayCanvas) {
+          const pixelRatio = Math.min(window.devicePixelRatio ?? 1, 2);
+          overlayCanvas.width = Math.round(width * pixelRatio);
+          overlayCanvas.height = Math.round(height * pixelRatio);
+          overlayCanvas.style.width = `${width}px`;
+          overlayCanvas.style.height = `${height}px`;
+        }
         camera.aspect = width / Math.max(1, height);
         camera.updateProjectionMatrix();
       };
@@ -746,6 +874,7 @@ function GlobeStage({
         if (cancelled) return;
         controls.update();
         renderer.render(scene, camera);
+        drawOverlay(THREE);
         animationFrame = window.requestAnimationFrame(tick);
       };
 
@@ -759,6 +888,7 @@ function GlobeStage({
   return (
     <div className="relative min-h-[720px] overflow-hidden bg-[radial-gradient(circle_at_50%_40%,rgba(21,40,66,.75),rgba(8,8,10,1)_72%)]">
       <div ref={containerRef} className="absolute inset-0" />
+      <div ref={overlayRootRef} className="pointer-events-none absolute inset-0 z-[999]" />
       <div className="pointer-events-none absolute left-4 top-4 rounded border border-white/10 bg-black/35 px-3 py-2 font-mono text-xs uppercase tracking-[0.2em] text-white/65 backdrop-blur-sm">
         globe mode · orbit controls
       </div>
