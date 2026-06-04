@@ -154,7 +154,11 @@ function buildTiles(gridSize: number): Tile[] {
       zoUsername: project ? `example-user-${String(index + 1).padStart(3, "0")}` : "unclaimed",
       ownerName: project ? names[index % names.length] : "Open slot",
       projectTitle: project ? project[1] : "Available tile",
-      projectUrl: project ? `/examples/${project[0]}` : "https://{{HANDLE}}.zo.space/examples",
+      projectUrl: project
+        ? (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+          ? `https://{{HANDLE}}.zo.space/examples/${project[0]}`
+          : `/examples/${project[0]}`)
+        : "https://{{HANDLE}}.zo.space/examples",
       thumbnailUrl: project ? thumbnailFor(project[0]) : null,
       status: project ? "live" : "empty",
       scene: index % 12,
@@ -665,10 +669,8 @@ function GlobeStage({
         if (overlaySvg) {
           const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
           polygon.setAttribute("points", projected.map((point) => `${point.x},${point.y}`).join(" "));
-          polygon.setAttribute(
-            "fill",
-            `rgba(${Number.parseInt(panel.tile.color.slice(1, 3), 16)}, ${Number.parseInt(panel.tile.color.slice(3, 5), 16)}, ${Number.parseInt(panel.tile.color.slice(5, 7), 16)}, 0.92)`,
-          );
+          polygon.setAttribute("fill", panel.tile.color);
+          polygon.setAttribute("fill-opacity", "0.92");
           polygon.setAttribute("stroke", "rgba(255,255,255,0.96)");
           polygon.setAttribute("stroke-width", "1.6");
           polygon.setAttribute("vector-effect", "non-scaling-stroke");
@@ -715,14 +717,14 @@ function GlobeStage({
     }
 
     async function start() {
-      const THREE = await import("https://esm.sh/three@0.167.1");
-      const { OrbitControls } = await import("https://esm.sh/three@0.167.1/examples/jsm/controls/OrbitControls?bundle");
+      const THREE = await import("https://cdn.jsdelivr.net/npm/three@0.167.1/+esm");
+      const { OrbitControls } = await import("https://cdn.jsdelivr.net/npm/three@0.167.1/examples/jsm/controls/OrbitControls.js/+esm");
       if (cancelled || !container) return;
 
       scene = new THREE.Scene();
       scene.background = new THREE.Color("#111111");
       camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
-      camera.position.set(0, 0, 28);
+      camera.position.set(0, 0, 32);
 
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio ?? 1, 2));
@@ -763,8 +765,8 @@ function GlobeStage({
       controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.07;
-      controls.minDistance = 12;
-      controls.maxDistance = 36;
+      controls.minDistance = 20;
+      controls.maxDistance = 48;
       controls.autoRotate = true;
       controls.autoRotateSpeed = 0.4;
       controls.target.set(0, 0, 0);
@@ -785,7 +787,7 @@ function GlobeStage({
         const y = -1 + (index / bandCounts.length) * 2;
         return Math.asin(Math.max(-1, Math.min(1, y)));
       });
-      const sphereRadius = 20.5;
+      const sphereRadius = 12.0;
       const loader = new THREE.TextureLoader();
 
       let tileIndex = 0;
@@ -794,7 +796,7 @@ function GlobeStage({
         const latitude1 = bandLatitudes[bandIndex + 1];
         const longitudeStep = (Math.PI * 2) / bandCount;
         const longitudeOffset = bandIndex % 2 === 0 ? 0 : longitudeStep / 2;
-        const bandWarpStrength = tileCount === 30 ? 0 : 0.08 * Math.cos(((bandIndex + 0.5) / bandCounts.length - 0.5) * Math.PI);
+        const bandWarpStrength = tiles.length === 30 ? 0 : 0.08 * Math.cos(((bandIndex + 0.5) / bandCounts.length - 0.5) * Math.PI);
         const latitudeWarp = bandWarpStrength === 0 ? () => 0 : (longitude: number) => Math.sin(longitude * 2 + bandIndex * 0.55) * bandWarpStrength;
 
         for (let column = 0; column < bandCount && tileIndex < tiles.length; column += 1, tileIndex += 1) {
