@@ -1,0 +1,155 @@
+﻿{
+    "hub":  "http://localhost:5300/",
+    "packs":  [
+                  {
+                      "name":  "ct-144-black-hole.zopack",
+                      "port":  5301,
+                      "file":  "ct-144-black-hole.zopack.md"
+                  },
+                  {
+                      "name":  "ct-145-raycasting.zopack",
+                      "port":  5302,
+                      "file":  "ct-145-raycasting.zopack.md"
+                  },
+                  {
+                      "name":  "ct-146-raycasting-fps-lite.zopack",
+                      "port":  5303,
+                      "file":  "ct-146-raycasting-fps-lite.zopack.md"
+                  },
+                  {
+                      "name":  "ct-155-kaleidoscope.zopack",
+                      "port":  5304,
+                      "file":  "ct-155-kaleidoscope.zopack.md"
+                  },
+                  {
+                      "name":  "ct-159-double-pendulum.zopack",
+                      "port":  5305,
+                      "file":  "ct-159-double-pendulum.zopack.md"
+                  },
+                  {
+                      "name":  "ct-160-spring-mesh.zopack",
+                      "port":  5306,
+                      "file":  "ct-160-spring-mesh.zopack.md"
+                  },
+                  {
+                      "name":  "ct-161-estimating-pi.zopack",
+                      "port":  5307,
+                      "file":  "ct-161-estimating-pi.zopack.md"
+                  },
+                  {
+                      "name":  "ct-162-self-avoiding-walk.zopack",
+                      "port":  5308,
+                      "file":  "ct-162-self-avoiding-walk.zopack.md"
+                  },
+                  {
+                      "name":  "ct-163-bezier-curves.zopack",
+                      "port":  5309,
+                      "file":  "ct-163-bezier-curves.zopack.md"
+                  },
+                  {
+                      "name":  "ct-164-slitscan.zopack",
+                      "port":  5310,
+                      "file":  "ct-164-slitscan.zopack.md"
+                  },
+                  {
+                      "name":  "ct-166-ascii-art-lite.zopack",
+                      "port":  5311,
+                      "file":  "ct-166-ascii-art-lite.zopack.md"
+                  },
+                  {
+                      "name":  "ct-167-prime-spiral.zopack",
+                      "port":  5312,
+                      "file":  "ct-167-prime-spiral.zopack.md"
+                  },
+                  {
+                      "name":  "ct-168-julia-set.zopack",
+                      "port":  5313,
+                      "file":  "ct-168-julia-set.zopack.md"
+                  },
+                  {
+                      "name":  "ct-169-pi-in-the-sky.zopack",
+                      "port":  5314,
+                      "file":  "ct-169-pi-in-the-sky.zopack.md"
+                  },
+                  {
+                      "name":  "ct-171-wfc-tiled-lite.zopack",
+                      "port":  5315,
+                      "file":  "ct-171-wfc-tiled-lite.zopack.md"
+                  },
+                  {
+                      "name":  "ct-174-fractal-tree.zopack",
+                      "port":  5316,
+                      "file":  "ct-174-fractal-tree.zopack.md"
+                  },
+                  {
+                      "name":  "ct-176-buffons-needle.zopack",
+                      "port":  5317,
+                      "file":  "ct-176-buffons-needle.zopack.md"
+                  },
+                  {
+                      "name":  "ct-178-climate-spiral.zopack",
+                      "port":  5318,
+                      "file":  "ct-178-climate-spiral.zopack.md"
+                  },
+                  {
+                      "name":  "ct-179-wolfram-ca.zopack",
+                      "port":  5319,
+                      "file":  "ct-179-wolfram-ca.zopack.md"
+                  },
+                  {
+                      "name":  "ct-180-falling-sand.zopack",
+                      "port":  5320,
+                      "file":  "ct-180-falling-sand.zopack.md"
+                  },
+                  {
+                      "name":  "ct-181-voronoi-stipple.zopack",
+                      "port":  5321,
+                      "file":  "ct-181-voronoi-stipple.zopack.md"
+                  },
+                  {
+                      "name":  "ct-182-apollonian-gasket.zopack",
+                      "port":  5322,
+                      "file":  "ct-182-apollonian-gasket.zopack.md"
+                  },
+                  {
+                      "name":  "ct-183-mathematical-marbling.zopack",
+                      "port":  5323,
+                      "file":  "ct-183-mathematical-marbling.zopack.md"
+                  },
+                  {
+                      "name":  "ct-184-elastic-collisions.zopack",
+                      "port":  5324,
+                      "file":  "ct-184-elastic-collisions.zopack.md"
+                  },
+                  {
+                      "name":  "ct-185-dragon-curve.zopack",
+                      "port":  5325,
+                      "file":  "ct-185-dragon-curve.zopack.md"
+                  },
+                  {
+                      "name":  "ct-c1-maurer-rose.zopack",
+                      "port":  5326,
+                      "file":  "ct-c1-maurer-rose.zopack.md"
+                  },
+                  {
+                      "name":  "ct-c2-collatz.zopack",
+                      "port":  5327,
+                      "file":  "ct-c2-collatz.zopack.md"
+                  },
+                  {
+                      "name":  "ct-c3-hilbert-curve.zopack",
+                      "port":  5328,
+                      "file":  "ct-c3-hilbert-curve.zopack.md"
+                  },
+                  {
+                      "name":  "ct-c4-worley-noise.zopack",
+                      "port":  5329,
+                      "file":  "ct-c4-worley-noise.zopack.md"
+                  },
+                  {
+                      "name":  "ct-c5-marching-squares.zopack",
+                      "port":  5330,
+                      "file":  "ct-c5-marching-squares.zopack.md"
+                  }
+              ]
+}
