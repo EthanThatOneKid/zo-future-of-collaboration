@@ -241,88 +241,146 @@ function makeGlobePlaceholderTexture(
   return texture;
 }
 
-const ICOSA_BASE = 0.5;
-const ICOSA_H = Math.sqrt(1 - ICOSA_BASE * ICOSA_BASE);
+function findCuboidSubdivisions(target: number): [number, number, number] {
+  let bestDims: [number, number, number] = [1, 1, 1];
+  let bestCount = Infinity;
+  let bestDistortion = Infinity;
 
-const ICOSAHEDRON_VERTICES: ReadonlyArray<readonly [number, number, number]> = [
-  [-ICOSA_BASE, ICOSA_H, 0], [ICOSA_BASE, ICOSA_H, 0], [-ICOSA_BASE, -ICOSA_H, 0], [ICOSA_BASE, -ICOSA_H, 0],
-  [0, -ICOSA_BASE, ICOSA_H], [0, ICOSA_BASE, ICOSA_H], [0, -ICOSA_BASE, -ICOSA_H], [0, ICOSA_BASE, -ICOSA_H],
-  [ICOSA_H, 0, -ICOSA_BASE], [ICOSA_H, 0, ICOSA_BASE], [-ICOSA_H, 0, -ICOSA_BASE], [-ICOSA_H, 0, ICOSA_BASE],
-];
-
-const ICOSAHEDRON_FACES: ReadonlyArray<readonly [number, number, number]> = [
-  [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
-  [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
-  [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
-  [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1],
-];
-
-function normalize(v: { x: number; y: number; z: number }) {
-  const length = Math.hypot(v.x, v.y, v.z) || 1;
-  return { x: v.x / length, y: v.y / length, z: v.z / length };
-}
-
-function midpoint(a: readonly [number, number, number], b: readonly [number, number, number]): readonly [number, number, number] {
-  return normalize({ x: (a[0] + b[0]) / 2, y: (a[1] + b[1]) / 2, z: (a[2] + b[2]) / 2 }) as readonly [number, number, number];
-}
-
-function subdivide(
-  face: readonly [number, number, number],
-  positions: Array<readonly [number, number, number]>,
-  out: Array<readonly [number, number, number]>,
-  detail: number,
-) {
-  let tris: Array<readonly [number, number, number]> = [face];
-  for (let level = 0; level < detail; level++) {
-    const next: Array<readonly [number, number, number]> = [];
-    for (const [a, b, c] of tris) {
-      const ab = midpoint(positions[a], positions[b]);
-      const bc = midpoint(positions[b], positions[c]);
-      const ca = midpoint(positions[c], positions[a]);
-      const iab = positions.length; positions.push(ab);
-      const ibc = positions.length; positions.push(bc);
-      const ica = positions.length; positions.push(ca);
-      next.push([a, iab, ica], [b, ibc, iab], [c, ica, ibc], [iab, ibc, ica]);
+  for (let nx = 1; nx <= 20; nx++) {
+    for (let ny = 1; ny <= 20; ny++) {
+      for (let nz = 1; nz <= 20; nz++) {
+        const count = 2 * (nx * ny + ny * nz + nz * nx);
+        if (count >= target) {
+          const distortion = (nx - ny) ** 2 + (ny - nz) ** 2 + (nz - nx) ** 2;
+          if (count < bestCount) {
+            bestCount = count;
+            bestDistortion = distortion;
+            bestDims = [nx, ny, nz];
+          } else if (count === bestCount && distortion < bestDistortion) {
+            bestDistortion = distortion;
+            bestDims = [nx, ny, nz];
+          }
+        }
+      }
     }
-    tris = next;
   }
-  out.push(...tris);
+  return bestDims;
 }
 
-function buildIcoSphereFaces(detail: number): Array<{ center: { x: number; y: number; z: number }; normal: { x: number; y: number; z: number } }> {
-  const positions: Array<readonly [number, number, number]> = [...ICOSAHEDRON_VERTICES];
-  const faces: Array<readonly [number, number, number]> = [];
-  for (const face of ICOSAHEDRON_FACES) subdivide(face, positions, faces, detail);
-  return faces.map(([a, b, c]) => {
-    const pa = positions[a];
-    const pb = positions[b];
-    const pc = positions[c];
-    const center = normalize({
-      x: (pa[0] + pb[0] + pc[0]) / 3,
-      y: (pa[1] + pb[1] + pc[1]) / 3,
-      z: (pa[2] + pb[2] + pc[2]) / 3,
-    });
-    return { center, normal: center };
-  });
-}
+function generateSpherifiedCuboidQuads(
+  nx: number,
+  ny: number,
+  nz: number,
+  radius: number
+): Array<Array<{ x: number; y: number; z: number }>> {
+  const quads: Array<Array<{ x: number; y: number; z: number }>> = [];
 
-function pickIcoDetail(tileCount: number): number {
-  let detail = 0;
-  while (20 * Math.pow(4, detail) < tileCount && detail < 5) detail++;
-  return detail;
-}
-
-function fibonacciSpherePosition(index: number, total: number, radius: number) {
-  const offset = 2 / total;
-  const increment = Math.PI * (3 - Math.sqrt(5));
-  const y = index * offset - 1 + offset / 2;
-  const radial = Math.sqrt(Math.max(0, 1 - y * y));
-  const phi = index * increment;
-  return {
-    x: Math.cos(phi) * radial * radius,
-    y: y * radius,
-    z: Math.sin(phi) * radial * radius,
+  const spherify = (x: number, y: number, z: number) => {
+    const len = Math.hypot(x, y, z) || 1;
+    return {
+      x: (x / len) * radius,
+      y: (y / len) * radius,
+      z: (z / len) * radius,
+    };
   };
+
+  // 1. Front Face (Z = 1)
+  for (let i = 0; i < nx; i++) {
+    for (let j = 0; j < ny; j++) {
+      const x0 = -1 + (2 * i) / nx;
+      const x1 = -1 + (2 * (i + 1)) / nx;
+      const y0 = -1 + (2 * j) / ny;
+      const y1 = -1 + (2 * (j + 1)) / ny;
+      quads.push([
+        spherify(x0, y0, 1),
+        spherify(x1, y0, 1),
+        spherify(x1, y1, 1),
+        spherify(x0, y1, 1),
+      ]);
+    }
+  }
+
+  // 2. Back Face (Z = -1)
+  for (let i = 0; i < nx; i++) {
+    for (let j = 0; j < ny; j++) {
+      const x0 = -1 + (2 * i) / nx;
+      const x1 = -1 + (2 * (i + 1)) / nx;
+      const y0 = -1 + (2 * j) / ny;
+      const y1 = -1 + (2 * (j + 1)) / ny;
+      quads.push([
+        spherify(x1, y0, -1),
+        spherify(x0, y0, -1),
+        spherify(x0, y1, -1),
+        spherify(x1, y1, -1),
+      ]);
+    }
+  }
+
+  // 3. Right Face (X = 1)
+  for (let k = 0; k < nz; k++) {
+    for (let j = 0; j < ny; j++) {
+      const z0 = -1 + (2 * k) / nz;
+      const z1 = -1 + (2 * (k + 1)) / nz;
+      const y0 = -1 + (2 * j) / ny;
+      const y1 = -1 + (2 * (j + 1)) / ny;
+      quads.push([
+        spherify(1, y0, z1),
+        spherify(1, y0, z0),
+        spherify(1, y1, z0),
+        spherify(1, y1, z1),
+      ]);
+    }
+  }
+
+  // 4. Left Face (X = -1)
+  for (let k = 0; k < nz; k++) {
+    for (let j = 0; j < ny; j++) {
+      const z0 = -1 + (2 * k) / nz;
+      const z1 = -1 + (2 * (k + 1)) / nz;
+      const y0 = -1 + (2 * j) / ny;
+      const y1 = -1 + (2 * (j + 1)) / ny;
+      quads.push([
+        spherify(-1, y0, z0),
+        spherify(-1, y0, z1),
+        spherify(-1, y1, z1),
+        spherify(-1, y1, z0),
+      ]);
+    }
+  }
+
+  // 5. Top Face (Y = 1)
+  for (let i = 0; i < nx; i++) {
+    for (let k = 0; k < nz; k++) {
+      const x0 = -1 + (2 * i) / nx;
+      const x1 = -1 + (2 * (i + 1)) / nx;
+      const z0 = -1 + (2 * k) / nz;
+      const z1 = -1 + (2 * (k + 1)) / nz;
+      quads.push([
+        spherify(x0, 1, z1),
+        spherify(x1, 1, z1),
+        spherify(x1, 1, z0),
+        spherify(x0, 1, z0),
+      ]);
+    }
+  }
+
+  // 6. Bottom Face (Y = -1)
+  for (let i = 0; i < nx; i++) {
+    for (let k = 0; k < nz; k++) {
+      const x0 = -1 + (2 * i) / nx;
+      const x1 = -1 + (2 * (i + 1)) / nx;
+      const z0 = -1 + (2 * k) / nz;
+      const z1 = -1 + (2 * (k + 1)) / nz;
+      quads.push([
+        spherify(x1, -1, z1),
+        spherify(x0, -1, z1),
+        spherify(x0, -1, z0),
+        spherify(x1, -1, z0),
+      ]);
+    }
+  }
+
+  return quads;
 }
 
 function TileCard({
@@ -424,23 +482,16 @@ function TileCard({
 
 function GlobeStage({
   tiles,
-  onHover,
+  debugMode = false,
 }: {
   tiles: Tile[];
-  onHover: (tile: Tile | null) => void;
+  debugMode?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const overlayRootRef = useRef<HTMLDivElement | null>(null);
-  const onHoverRef = useRef(onHover);
-
-  useEffect(() => {
-    onHoverRef.current = onHover;
-  }, [onHover]);
 
   useEffect(() => {
     const container = containerRef.current;
-    const overlayRoot = overlayRootRef.current;
-    if (!container || !overlayRoot || typeof window === "undefined") return;
+    if (!container || typeof window === "undefined") return;
 
     let cancelled = false;
     let animationFrame = 0;
@@ -448,111 +499,26 @@ function GlobeStage({
     const textures: Array<{ dispose: () => void }> = [];
     const materials: Array<{ dispose: () => void }> = [];
     const geometries: Array<{ dispose: () => void }> = [];
-    const panels: Array<{ mesh: any; tile: Tile; points: Array<{ x: number; y: number; z: number }> }> = [];
     let renderer: any = null;
-    let overlayCanvas: HTMLCanvasElement | null = null;
-    let overlayContext: CanvasRenderingContext2D | null = null;
-    let overlaySvg: SVGSVGElement | null = null;
-    let overlayDom: HTMLDivElement | null = null;
     let controls: any = null;
     let scene: any = null;
     let camera: any = null;
-    let raycaster: any = null;
-    let hoveredPanel: { mesh: any; tile: Tile } | null = null;
-    const pointer = { x: 0, y: 0 };
 
-    const pickQuadBands = (tileCount: number) => {
-      if (tileCount >= 80) {
-        return [10, 10, 10, 10, 10, 10, 10, 10];
-      }
-      if (tileCount === 30) {
-        return [6, 6, 6, 6, 6];
-      }
-      const bandCount = Math.min(tileCount, Math.max(3, Math.round(Math.sqrt(tileCount / 1.2))));
-      const bandWeights = Array.from({ length: bandCount }, (_, bandIndex) => {
-        const topY = 1 - (bandIndex / bandCount) * 2;
-        const bottomY = 1 - ((bandIndex + 1) / bandCount) * 2;
-        const centerY = (topY + bottomY) / 2;
-        return Math.max(0.18, Math.sqrt(Math.max(0, 1 - centerY * centerY)));
-      });
-      const totalWeight = bandWeights.reduce((sum, weight) => sum + weight, 0);
-      const rawCounts = bandWeights.map((weight) => (weight / totalWeight) * tileCount);
-      const counts = rawCounts.map((count) => Math.max(1, Math.floor(count)));
-      let remainder = tileCount - counts.reduce((sum, count) => sum + count, 0);
-      const order = rawCounts
-        .map((count, index) => ({ fraction: count - Math.floor(count), index }))
-        .sort((left, right) => right.fraction - left.fraction);
-      let cursor = 0;
-      while (remainder > 0) {
-        counts[order[cursor % order.length].index] += 1;
-        remainder -= 1;
-        cursor += 1;
-      }
-      return counts;
-    };
-
-    const spherePoint = (radius: number, latitude: number, longitude: number) => {
-      const cosLatitude = Math.cos(latitude);
-      return {
-        x: cosLatitude * Math.cos(longitude) * radius,
-        y: Math.sin(latitude) * radius,
-        z: cosLatitude * Math.sin(longitude) * radius,
-      };
-    };
-
-    const mixPoint = (
-      a: { x: number; y: number; z: number },
-      b: { x: number; y: number; z: number },
-      t: number,
-    ) => ({
-      x: a.x + (b.x - a.x) * t,
-      y: a.y + (b.y - a.y) * t,
-      z: a.z + (b.z - a.z) * t,
-    });
-
-    const normalizePoint = (point: { x: number; y: number; z: number }, radius: number) => {
-      const length = Math.hypot(point.x, point.y, point.z) || 1;
-      return {
-        x: (point.x / length) * radius,
-        y: (point.y / length) * radius,
-        z: (point.z / length) * radius,
-      };
-    };
-
-    const buildCurvedTileGeometry = (
+    const buildQuadGeometry = (
       THREE: typeof import("https://esm.sh/three@0.167.1"),
       points: Array<{ x: number; y: number; z: number }>,
-      radius: number,
-      segments = 1,
     ) => {
-      const positions: number[] = [];
-      const uvs: number[] = [];
-      const indices: number[] = [];
-      const stride = segments + 1;
-
-      for (let row = 0; row <= segments; row += 1) {
-        const v = row / segments;
-        const left = mixPoint(points[0], points[3], v);
-        const right = mixPoint(points[1], points[2], v);
-        for (let column = 0; column <= segments; column += 1) {
-          const u = column / segments;
-          const point = normalizePoint(mixPoint(left, right, u), radius);
-          positions.push(point.x, point.y, point.z);
-          uvs.push(u, 1 - v);
-        }
-      }
-
-      for (let row = 0; row < segments; row += 1) {
-        for (let column = 0; column < segments; column += 1) {
-          const index = row * stride + column;
-          indices.push(index, index + 1, index + stride + 1, index, index + stride + 1, index + stride);
-        }
-      }
-
+      const positions = new Float32Array([
+        points[0].x, points[0].y, points[0].z,
+        points[1].x, points[1].y, points[1].z,
+        points[2].x, points[2].y, points[2].z,
+        points[3].x, points[3].y, points[3].z,
+      ]);
+      const uvs = new Float32Array([0, 1, 1, 1, 1, 0, 0, 0]);
       const geometry = new THREE.BufferGeometry();
-      geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-      geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
-      geometry.setIndex(indices);
+      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
+      geometry.setIndex([0, 1, 2, 0, 2, 3]);
       geometry.computeVertexNormals();
       return geometry;
     };
@@ -561,160 +527,13 @@ function GlobeStage({
       cancelled = true;
       cancelAnimationFrame(animationFrame);
       resizeObserver?.disconnect();
-      if (renderer) {
-        renderer.domElement.removeEventListener("pointermove", handlePointerMove);
-        renderer.domElement.removeEventListener("pointerleave", handlePointerLeave);
-        renderer.domElement.removeEventListener("click", handleClick);
-      }
       controls?.dispose?.();
       for (const material of materials) material.dispose?.();
       for (const geometry of geometries) geometry.dispose?.();
       for (const texture of textures) texture.dispose?.();
       renderer?.dispose?.();
-      if (renderer?.domElement?.parentNode === overlayRoot) overlayRoot.removeChild(renderer.domElement);
-      overlayCanvas?.remove();
-      overlaySvg?.remove();
-      overlayDom?.remove();
-      onHoverRef.current(null);
+      if (renderer?.domElement?.parentNode === container) container.removeChild(renderer.domElement);
     };
-
-    function setHoveredPanel(nextPanel: { mesh: any; tile: Tile } | null) {
-      if (hoveredPanel?.mesh === nextPanel?.mesh) return;
-      if (hoveredPanel) hoveredPanel.mesh.scale.setScalar(1);
-      hoveredPanel = nextPanel;
-      if (hoveredPanel) {
-        hoveredPanel.mesh.scale.setScalar(1.12);
-        onHoverRef.current(hoveredPanel.tile);
-        if (renderer?.domElement) renderer.domElement.style.cursor = "pointer";
-      } else {
-        onHoverRef.current(null);
-        if (renderer?.domElement) renderer.domElement.style.cursor = "grab";
-      }
-    }
-
-    function updatePointer(event: PointerEvent) {
-      const rect = renderer.domElement.getBoundingClientRect();
-      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      pointer.y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
-    }
-
-    function handlePointerMove(event: PointerEvent) {
-      if (!raycaster || !camera) return;
-      updatePointer(event);
-      raycaster.setFromCamera(pointer, camera);
-      const intersections = raycaster.intersectObjects(panels.map((entry) => entry.mesh), false);
-      const panel = intersections.length > 0 ? panels.find((entry) => entry.mesh === intersections[0].object) ?? null : null;
-      setHoveredPanel(panel);
-    }
-
-    function handlePointerLeave() {
-      setHoveredPanel(null);
-    }
-
-    function handleClick() {
-      if (!hoveredPanel) return;
-      window.open(hoveredPanel.tile.projectUrl, "_blank", "noopener,noreferrer");
-    }
-
-    function drawOverlay(THREE: typeof import("https://esm.sh/three@0.167.1")) {
-      if (!overlayContext || !camera || !overlayCanvas) return;
-      const width = overlayCanvas.clientWidth || overlayCanvas.width;
-      const height = overlayCanvas.clientHeight || overlayCanvas.height;
-      const pixelRatio = overlayCanvas.width / Math.max(1, width);
-      if (overlaySvg) {
-        overlaySvg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-        overlaySvg.setAttribute("width", String(width));
-        overlaySvg.setAttribute("height", String(height));
-        overlaySvg.innerHTML = "";
-        const debugRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        debugRect.setAttribute("x", "20");
-        debugRect.setAttribute("y", "20");
-        debugRect.setAttribute("width", "28");
-        debugRect.setAttribute("height", "28");
-        debugRect.setAttribute("fill", "rgba(255,0,0,0.92)");
-        debugRect.setAttribute("stroke", "white");
-        debugRect.setAttribute("stroke-width", "2");
-        overlaySvg.appendChild(debugRect);
-      }
-      if (overlayDom) overlayDom.innerHTML = "";
-      overlayContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-      overlayContext.clearRect(0, 0, width, height);
-      overlayContext.globalCompositeOperation = "source-over";
-      overlayContext.lineJoin = "miter";
-      overlayContext.lineCap = "butt";
-      for (const panel of panels) {
-        const projected = panel.points.map((point) => {
-          const vector = new THREE.Vector3(point.x, point.y, point.z).project(camera);
-          return {
-            x: ((vector.x + 1) * 0.5) * width,
-            y: ((1 - vector.y) * 0.5) * height,
-          };
-        });
-        overlayContext.beginPath();
-        overlayContext.moveTo(projected[0].x, projected[0].y);
-        for (let index = 1; index < projected.length; index += 1) overlayContext.lineTo(projected[index].x, projected[index].y);
-        overlayContext.closePath();
-        overlayContext.fillStyle = "rgba(8, 15, 28, 0.74)";
-        overlayContext.fill();
-        overlayContext.shadowColor = "rgba(112, 183, 255, 0.22)";
-        overlayContext.shadowBlur = 8;
-        overlayContext.strokeStyle = "rgba(255,255,255,0.18)";
-        overlayContext.lineWidth = 5.5;
-        overlayContext.stroke();
-        overlayContext.shadowBlur = 0;
-        overlayContext.strokeStyle = "rgba(244, 254, 255, 0.96)";
-        overlayContext.lineWidth = 1.45;
-        overlayContext.stroke();
-
-        if (overlaySvg) {
-          const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-          polygon.setAttribute("points", projected.map((point) => `${point.x},${point.y}`).join(" "));
-          polygon.setAttribute("fill", panel.tile.color);
-          polygon.setAttribute("fill-opacity", "0.92");
-          polygon.setAttribute("stroke", "rgba(255,255,255,0.96)");
-          polygon.setAttribute("stroke-width", "1.6");
-          polygon.setAttribute("vector-effect", "non-scaling-stroke");
-          polygon.setAttribute("paint-order", "stroke fill");
-          overlaySvg.appendChild(polygon);
-
-          if (panel.tile.thumbnailUrl) {
-            const defs = overlaySvg.querySelector("defs") ?? document.createElementNS("http://www.w3.org/2000/svg", "defs");
-            if (!defs.parentNode) overlaySvg.appendChild(defs);
-            let clipPath = overlaySvg.querySelector(`#clip-${panel.tile.id}`) as SVGClipPathElement | null;
-            if (!clipPath) {
-              clipPath = document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
-              clipPath.id = `clip-${panel.tile.id}`;
-              const clipPolygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-              clipPolygon.setAttribute("points", projected.map((point) => `${point.x},${point.y}`).join(" "));
-              clipPath.appendChild(clipPolygon);
-              defs.appendChild(clipPath);
-            }
-            const image = document.createElementNS("http://www.w3.org/2000/svg", "image");
-            image.setAttribute("href", panel.tile.thumbnailUrl);
-            image.setAttribute("width", String(width));
-            image.setAttribute("height", String(height));
-            image.setAttribute("preserveAspectRatio", "xMidYMid slice");
-            image.setAttribute("clip-path", `url(#clip-${panel.tile.id})`);
-            image.setAttribute("opacity", "0.98");
-            overlaySvg.appendChild(image);
-          }
-        } else if (overlayDom) {
-          const layer = document.createElement("div");
-          layer.style.position = "absolute";
-          layer.style.inset = "0";
-          layer.style.clipPath = `polygon(${projected.map((point) => `${point.x}px ${point.y}px`).join(", ")})`;
-          layer.style.backgroundImage = panel.tile.thumbnailUrl
-            ? `linear-gradient(rgba(255,255,255,.12), rgba(0,0,0,.18)), url(${panel.tile.thumbnailUrl})`
-            : `linear-gradient(135deg, ${panel.tile.color}, ${panel.tile.color})`;
-          layer.style.backgroundSize = "cover";
-          layer.style.backgroundPosition = "center";
-          layer.style.filter = "contrast(1.08) brightness(1.02) saturate(1.12)";
-          layer.style.boxShadow = "inset 0 0 0 1.5px rgba(255,255,255,0.92), inset 0 0 0 6px rgba(10,15,24,0.72)";
-          layer.style.opacity = "0.98";
-          overlayDom.appendChild(layer);
-        }
-      }
-    }
 
     async function start() {
       const THREE = await import("https://cdn.jsdelivr.net/npm/three@0.167.1/+esm");
@@ -722,45 +541,19 @@ function GlobeStage({
       if (cancelled || !container) return;
 
       scene = new THREE.Scene();
-      scene.background = new THREE.Color("#111111");
       camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
       camera.position.set(0, 0, 32);
 
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio ?? 1, 2));
-      renderer.setSize(container.clientWidth, container.clientHeight, false);
+      renderer.setSize(container.clientWidth, container.clientHeight, true);
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.domElement.style.cursor = "grab";
       renderer.domElement.style.position = "absolute";
       renderer.domElement.style.inset = "0";
-      renderer.domElement.style.zIndex = "1";
-      overlayRoot.appendChild(renderer.domElement);
-      overlayCanvas = document.createElement("canvas");
-      overlayCanvas.style.position = "absolute";
-      overlayCanvas.style.inset = "0";
-      overlayCanvas.style.zIndex = "20";
-      overlayCanvas.style.pointerEvents = "none";
-      overlayRoot.appendChild(overlayCanvas);
-      overlayContext = overlayCanvas.getContext("2d");
-      overlaySvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      overlaySvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-      overlaySvg.setAttribute("preserveAspectRatio", "none");
-      overlaySvg.style.position = "absolute";
-      overlaySvg.style.inset = "0";
-      overlaySvg.style.zIndex = "30";
-      overlaySvg.style.pointerEvents = "none";
-      overlaySvg.style.mixBlendMode = "normal";
-      overlaySvg.style.filter = "drop-shadow(0 0 6px rgba(112, 183, 255, 0.22))";
-      overlaySvg.style.opacity = "1";
-      overlaySvg.style.display = "block";
-      overlaySvg.setAttribute("shape-rendering", "crispEdges");
-      overlayRoot.appendChild(overlaySvg);
-      overlayDom = document.createElement("div");
-      overlayDom.style.position = "absolute";
-      overlayDom.style.inset = "0";
-      overlayDom.style.zIndex = "40";
-      overlayDom.style.pointerEvents = "none";
-      overlayRoot.appendChild(overlayDom);
+      renderer.domElement.style.width = "100%";
+      renderer.domElement.style.height = "100%";
+      container.appendChild(renderer.domElement);
 
       controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
@@ -771,8 +564,6 @@ function GlobeStage({
       controls.autoRotateSpeed = 0.4;
       controls.target.set(0, 0, 0);
 
-      raycaster = new THREE.Raycaster();
-
       const ambient = new THREE.AmbientLight(0xffffff, 2.1);
       scene.add(ambient);
       const directional = new THREE.DirectionalLight(0x9fd8ff, 1.8);
@@ -782,84 +573,80 @@ function GlobeStage({
       backLight.position.set(-12, -8, -10);
       scene.add(backLight);
 
-      const bandCounts = pickQuadBands(tiles.length);
-      const bandLatitudes = Array.from({ length: bandCounts.length + 1 }, (_, index) => {
-        const y = -1 + (index / bandCounts.length) * 2;
-        return Math.asin(Math.max(-1, Math.min(1, y)));
-      });
       const sphereRadius = 12.0;
+      const [nx, ny, nz] = findCuboidSubdivisions(tiles.length);
+      const totalQuadsCount = 2 * (nx * ny + ny * nz + nz * nx);
+
+      const paddedTiles = [...tiles];
+      while (paddedTiles.length < totalQuadsCount) {
+        const index = paddedTiles.length;
+        paddedTiles.push({
+          id: index + 1,
+          color: colorForPosition(index, totalQuadsCount),
+          zoUsername: "unclaimed",
+          ownerName: "Open slot",
+          projectTitle: "Available tile",
+          projectUrl: "https://{{HANDLE}}.zo.space/examples",
+          thumbnailUrl: null,
+          status: "empty",
+          scene: index % 12,
+        });
+      }
+
+      const quads = generateSpherifiedCuboidQuads(nx, ny, nz, sphereRadius);
       const loader = new THREE.TextureLoader();
+      const edgeMaterial = new THREE.LineBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.35,
+      });
+      materials.push(edgeMaterial);
 
-      let tileIndex = 0;
-      bandCounts.forEach((bandCount, bandIndex) => {
-        const latitude0 = bandLatitudes[bandIndex];
-        const latitude1 = bandLatitudes[bandIndex + 1];
-        const longitudeStep = (Math.PI * 2) / bandCount;
-        const longitudeOffset = bandIndex % 2 === 0 ? 0 : longitudeStep / 2;
-        const bandWarpStrength = tiles.length === 30 ? 0 : 0.08 * Math.cos(((bandIndex + 0.5) / bandCounts.length - 0.5) * Math.PI);
-        const latitudeWarp = bandWarpStrength === 0 ? () => 0 : (longitude: number) => Math.sin(longitude * 2 + bandIndex * 0.55) * bandWarpStrength;
+      quads.forEach((points, tileIndex) => {
+        const tile = paddedTiles[tileIndex];
+        const geometry = buildQuadGeometry(THREE, points);
+        geometries.push(geometry);
 
-        for (let column = 0; column < bandCount && tileIndex < tiles.length; column += 1, tileIndex += 1) {
-          const tile = tiles[tileIndex];
-          const longitude0 = -Math.PI + longitudeOffset + column * longitudeStep;
-          const longitude1 = longitude0 + longitudeStep;
+        const material = new THREE.MeshStandardMaterial({
+          color: tile.thumbnailUrl ? 0xffffff : new THREE.Color(tile.color),
+          roughness: 0.45,
+          metalness: 0.05,
+          flatShading: true,
+          side: THREE.FrontSide,
+        });
+        materials.push(material);
 
-          const points = [
-            spherePoint(sphereRadius, latitude0 + latitudeWarp(longitude0), longitude0),
-            spherePoint(sphereRadius, latitude0 + latitudeWarp(longitude1), longitude1),
-            spherePoint(sphereRadius, latitude1 + latitudeWarp(longitude1), longitude1),
-            spherePoint(sphereRadius, latitude1 + latitudeWarp(longitude0), longitude0),
-          ];
-
-          const geometry = buildCurvedTileGeometry(THREE, points, sphereRadius, 1);
-          geometries.push(geometry);
-
-          const material = new THREE.MeshBasicMaterial({
-            color: tile.thumbnailUrl ? 0xffffff : new THREE.Color(tile.color),
-            side: THREE.DoubleSide,
-          });
-          materials.push(material);
-
-          if (tile.thumbnailUrl) {
-            const placeholder = makeGlobePlaceholderTexture(THREE, renderer, tile.color, tile.id);
-            if (placeholder) {
-              textures.push(placeholder);
-              material.map = placeholder;
-            }
-            const texture = loader.load(tile.thumbnailUrl, (loadedTexture) => {
-              brightenThumbnailTexture(THREE, loadedTexture, renderer);
-              material.map = loadedTexture;
-              material.needsUpdate = true;
-            });
-            texture.colorSpace = THREE.SRGBColorSpace;
-            texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-            textures.push(texture);
-            material.map = texture;
-            material.needsUpdate = true;
+        if (tile.thumbnailUrl) {
+          const placeholder = makeGlobePlaceholderTexture(THREE, renderer, tile.color, tile.id);
+          if (placeholder) {
+            textures.push(placeholder);
+            material.map = placeholder;
           }
-
-          const mesh = new THREE.Mesh(geometry, material);
-          mesh.userData = { tile };
-          mesh.renderOrder = 1;
-          scene.add(mesh);
-          const seamGeometry = geometry.clone();
-          geometries.push(seamGeometry);
-          panels.push({ mesh, tile, points });
+          const texture = loader.load(tile.thumbnailUrl, (loadedTexture) => {
+            brightenThumbnailTexture(THREE, loadedTexture, renderer);
+            material.map = loadedTexture;
+            material.needsUpdate = true;
+          });
+          texture.colorSpace = THREE.SRGBColorSpace;
+          texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+          textures.push(texture);
+          material.map = texture;
+          material.needsUpdate = true;
         }
+
+        const mesh = new THREE.Mesh(geometry, material);
+        scene.add(mesh);
+
+        const edgeGeometry = new THREE.EdgesGeometry(geometry);
+        geometries.push(edgeGeometry);
+        scene.add(new THREE.LineSegments(edgeGeometry, edgeMaterial));
       });
 
       const resize = () => {
         if (!renderer || !camera || !container) return;
         const width = container.clientWidth;
         const height = container.clientHeight;
-        renderer.setSize(width, height, false);
-        if (overlayCanvas) {
-          const pixelRatio = Math.min(window.devicePixelRatio ?? 1, 2);
-          overlayCanvas.width = Math.round(width * pixelRatio);
-          overlayCanvas.height = Math.round(height * pixelRatio);
-          overlayCanvas.style.width = `${width}px`;
-          overlayCanvas.style.height = `${height}px`;
-        }
+        renderer.setSize(width, height, true);
         camera.aspect = width / Math.max(1, height);
         camera.updateProjectionMatrix();
       };
@@ -868,15 +655,10 @@ function GlobeStage({
       resizeObserver.observe(container);
       resize();
 
-      renderer.domElement.addEventListener("pointermove", handlePointerMove);
-      renderer.domElement.addEventListener("pointerleave", handlePointerLeave);
-      renderer.domElement.addEventListener("click", handleClick);
-
       const tick = () => {
         if (cancelled) return;
         controls.update();
         renderer.render(scene, camera);
-        drawOverlay(THREE);
         animationFrame = window.requestAnimationFrame(tick);
       };
 
@@ -885,18 +667,20 @@ function GlobeStage({
 
     void start();
     return cleanup;
-  }, [tiles]);
+  }, [tiles, debugMode]);
 
   return (
     <div className="relative min-h-[720px] overflow-hidden bg-[radial-gradient(circle_at_50%_40%,rgba(21,40,66,.75),rgba(8,8,10,1)_72%)]">
       <div ref={containerRef} className="absolute inset-0" />
-      <div ref={overlayRootRef} className="pointer-events-none absolute inset-0 z-[999]" />
       <div className="pointer-events-none absolute left-4 top-4 rounded border border-white/10 bg-black/35 px-3 py-2 font-mono text-xs uppercase tracking-[0.2em] text-white/65 backdrop-blur-sm">
         globe mode · orbit controls
       </div>
       <div className="pointer-events-none absolute right-4 top-4 rounded border border-white/10 bg-black/35 px-3 py-2 font-mono text-xs uppercase tracking-[0.2em] text-white/65 backdrop-blur-sm">
         {tiles.length} tiles
       </div>
+      {debugMode ? (
+        <div className="pointer-events-none absolute left-4 top-14 h-7 w-7 rounded border-2 border-white bg-red-500/90" />
+      ) : null}
     </div>
   );
 }
@@ -1068,7 +852,7 @@ function FutureOfCollaborationContent() {
               ))}
             </div>
           ) : (
-            <GlobeStage tiles={globeTiles} onHover={handleHover} />
+            <GlobeStage tiles={globeTiles} debugMode={debugMode} />
           )}
 
           <footer className="grid gap-px bg-[#151515] md:grid-cols-[1fr_1fr]">
