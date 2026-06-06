@@ -58,6 +58,8 @@ const exampleProjects = [
   ["ct-c5-marching-squares", "Marching Squares"],
 ] as const;
 
+const EXAMPLE_PROJECT_COUNT = exampleProjects.length;
+
 const gradientStops = [
   { stop: 0, color: [238, 222, 180] },
   { stop: 0.28, color: [189, 108, 72] },
@@ -243,23 +245,23 @@ function makeGlobePlaceholderTexture(
 
 function findCuboidSubdivisions(target: number): [number, number, number] {
   let bestDims: [number, number, number] = [1, 1, 1];
-  let bestCount = Infinity;
+  let bestPadding = Infinity;
   let bestDistortion = Infinity;
 
   for (let nx = 1; nx <= 20; nx++) {
     for (let ny = 1; ny <= 20; ny++) {
       for (let nz = 1; nz <= 20; nz++) {
         const count = 2 * (nx * ny + ny * nz + nz * nx);
-        if (count >= target) {
-          const distortion = (nx - ny) ** 2 + (ny - nz) ** 2 + (nz - nx) ** 2;
-          if (count < bestCount) {
-            bestCount = count;
-            bestDistortion = distortion;
-            bestDims = [nx, ny, nz];
-          } else if (count === bestCount && distortion < bestDistortion) {
-            bestDistortion = distortion;
-            bestDims = [nx, ny, nz];
-          }
+        if (count < target) continue;
+        const padding = count - target;
+        const distortion = (nx - ny) ** 2 + (ny - nz) ** 2 + (nz - nx) ** 2;
+        if (
+          padding < bestPadding ||
+          (padding === bestPadding && distortion < bestDistortion)
+        ) {
+          bestPadding = padding;
+          bestDistortion = distortion;
+          bestDims = [nx, ny, nz];
         }
       }
     }
@@ -488,6 +490,9 @@ function GlobeStage({
   debugMode?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const [nx, ny, nz] = findCuboidSubdivisions(tiles.length);
+  const faceCount = 2 * (nx * ny + ny * nz + nz * nx);
+  const exampleCount = tiles.filter((tile) => tile.thumbnailUrl).length;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -504,21 +509,59 @@ function GlobeStage({
     let scene: any = null;
     let camera: any = null;
 
-    const buildQuadGeometry = (
+    const mixPoint = (
+      a: { x: number; y: number; z: number },
+      b: { x: number; y: number; z: number },
+      t: number,
+    ) => ({
+      x: a.x + (b.x - a.x) * t,
+      y: a.y + (b.y - a.y) * t,
+      z: a.z + (b.z - a.z) * t,
+    });
+
+    const normalizePoint = (point: { x: number; y: number; z: number }, radius: number) => {
+      const length = Math.hypot(point.x, point.y, point.z) || 1;
+      return {
+        x: (point.x / length) * radius,
+        y: (point.y / length) * radius,
+        z: (point.z / length) * radius,
+      };
+    };
+
+    const buildCurvedTileGeometry = (
       THREE: typeof import("https://esm.sh/three@0.167.1"),
       points: Array<{ x: number; y: number; z: number }>,
+      radius: number,
+      segments = 2,
     ) => {
-      const positions = new Float32Array([
-        points[0].x, points[0].y, points[0].z,
-        points[1].x, points[1].y, points[1].z,
-        points[2].x, points[2].y, points[2].z,
-        points[3].x, points[3].y, points[3].z,
-      ]);
-      const uvs = new Float32Array([0, 1, 1, 1, 1, 0, 0, 0]);
+      const positions: number[] = [];
+      const uvs: number[] = [];
+      const indices: number[] = [];
+      const stride = segments + 1;
+
+      for (let row = 0; row <= segments; row += 1) {
+        const v = row / segments;
+        const left = mixPoint(points[0], points[3], v);
+        const right = mixPoint(points[1], points[2], v);
+        for (let column = 0; column <= segments; column += 1) {
+          const u = column / segments;
+          const point = normalizePoint(mixPoint(left, right, u), radius);
+          positions.push(point.x, point.y, point.z);
+          uvs.push(u, 1 - v);
+        }
+      }
+
+      for (let row = 0; row < segments; row += 1) {
+        for (let column = 0; column < segments; column += 1) {
+          const index = row * stride + column;
+          indices.push(index, index + 1, index + stride + 1, index, index + stride + 1, index + stride);
+        }
+      }
+
       const geometry = new THREE.BufferGeometry();
-      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-      geometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
-      geometry.setIndex([0, 1, 2, 0, 2, 3]);
+      geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+      geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+      geometry.setIndex(indices);
       geometry.computeVertexNormals();
       return geometry;
     };
@@ -580,16 +623,10 @@ function GlobeStage({
       const paddedTiles = [...tiles];
       while (paddedTiles.length < totalQuadsCount) {
         const index = paddedTiles.length;
+        const wrapSource = tiles[index % tiles.length];
         paddedTiles.push({
+          ...wrapSource,
           id: index + 1,
-          color: colorForPosition(index, totalQuadsCount),
-          zoUsername: "unclaimed",
-          ownerName: "Open slot",
-          projectTitle: "Available tile",
-          projectUrl: "https://{{HANDLE}}.zo.space/examples",
-          thumbnailUrl: null,
-          status: "empty",
-          scene: index % 12,
         });
       }
 
@@ -604,7 +641,7 @@ function GlobeStage({
 
       quads.forEach((points, tileIndex) => {
         const tile = paddedTiles[tileIndex];
-        const geometry = buildQuadGeometry(THREE, points);
+        const geometry = buildCurvedTileGeometry(THREE, points, sphereRadius, 2);
         geometries.push(geometry);
 
         const material = new THREE.MeshStandardMaterial({
@@ -676,7 +713,7 @@ function GlobeStage({
         globe mode · orbit controls
       </div>
       <div className="pointer-events-none absolute right-4 top-4 rounded border border-white/10 bg-black/35 px-3 py-2 font-mono text-xs uppercase tracking-[0.2em] text-white/65 backdrop-blur-sm">
-        {tiles.length} tiles
+        {exampleCount} examples · {faceCount} faces
       </div>
       {debugMode ? (
         <div className="pointer-events-none absolute left-4 top-14 h-7 w-7 rounded border-2 border-white bg-red-500/90" />
@@ -718,7 +755,10 @@ function FutureOfCollaborationContent() {
   }, [gridSize, viewMode, debugMode]);
 
   const tiles = useMemo(() => buildTiles(gridSize), [gridSize]);
-  const globeTiles = tiles;
+  const globeTiles = useMemo(
+    () => tiles.slice(0, Math.min(gridSize, EXAMPLE_PROJECT_COUNT)),
+    [tiles, gridSize],
+  );
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   const [lruIds, setLruIds] = useState<number[]>([]);
 
@@ -834,6 +874,11 @@ function FutureOfCollaborationContent() {
                   <div className="text-[10px] tracking-[0.22em] text-white/40">
                     cache: {lruIds.length} / {MAX_MOUNTED_PORTALS} mounted
                   </div>
+                  {viewMode === "globe" && gridSize > EXAMPLE_PROJECT_COUNT ? (
+                    <div className="text-[10px] tracking-[0.22em] text-white/40">
+                      globe shows first {EXAMPLE_PROJECT_COUNT} examples
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>
