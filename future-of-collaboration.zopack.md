@@ -181,72 +181,25 @@ function PortalIframe({ tile, scale }: { tile: Tile; scale: number }) {
   );
 }
 
-function brightenThumbnailTexture(
-  THREE: typeof import("https://esm.sh/three@0.167.1"),
-  texture: any,
-  renderer: any,
-) {
-  const image = texture.image as CanvasImageSource | undefined;
-  if (!image || typeof document === "undefined") return;
-  const width = "width" in image && image.width ? image.width : 512;
-  const height = "height" in image && image.height ? image.height : 512;
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-  ctx.filter = "brightness(12) contrast(1.35) saturate(1.5)";
-  ctx.drawImage(image, 0, 0, width, height);
-  ctx.filter = "none";
-  ctx.globalCompositeOperation = "screen";
-  ctx.fillStyle = "rgba(255,255,255,0.16)";
-  ctx.fillRect(0, 0, width, height);
-  ctx.globalCompositeOperation = "source-over";
-  const border = Math.max(4, Math.round(Math.min(width, height) * 0.018));
-  ctx.strokeStyle = "rgba(255,255,255,0.82)";
-  ctx.lineWidth = border;
-  ctx.strokeRect(border / 2, border / 2, width - border, height - border);
-  texture.image = canvas;
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-  texture.needsUpdate = true;
-}
-
-function makeGlobePlaceholderTexture(
-  THREE: typeof import("https://esm.sh/three@0.167.1"),
-  renderer: any,
-  color: string,
-  tileId: number,
-) {
-  const canvas = document.createElement("canvas");
-  canvas.width = 256;
-  canvas.height = 256;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
-  ctx.fillStyle = color;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "rgba(255,255,255,0.18)";
-  ctx.fillRect(0, 0, canvas.width, 22);
-  ctx.fillRect(0, canvas.height - 22, canvas.width, 22);
-  ctx.strokeStyle = "rgba(255,255,255,0.8)";
-  ctx.lineWidth = 10;
-  ctx.strokeRect(5, 5, canvas.width - 10, canvas.height - 10);
-  ctx.fillStyle = "rgba(0,0,0,0.35)";
-  ctx.font = "bold 72px monospace";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(String(tileId), canvas.width / 2, canvas.height / 2);
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-  texture.needsUpdate = true;
-  return texture;
-}
-
 function findCuboidSubdivisions(target: number): [number, number, number] {
   let bestDims: [number, number, number] = [1, 1, 1];
   let bestPadding = Infinity;
   let bestDistortion = Infinity;
+  const maxAspectRatio = 2;
+
+  const consider = (
+    nx: number,
+    ny: number,
+    nz: number,
+    padding: number,
+    distortion: number,
+  ) => {
+    if (padding < bestPadding || (padding === bestPadding && distortion < bestDistortion)) {
+      bestPadding = padding;
+      bestDistortion = distortion;
+      bestDims = [nx, ny, nz];
+    }
+  };
 
   for (let nx = 1; nx <= 20; nx++) {
     for (let ny = 1; ny <= 20; ny++) {
@@ -255,17 +208,25 @@ function findCuboidSubdivisions(target: number): [number, number, number] {
         if (count < target) continue;
         const padding = count - target;
         const distortion = (nx - ny) ** 2 + (ny - nz) ** 2 + (nz - nx) ** 2;
-        if (
-          padding < bestPadding ||
-          (padding === bestPadding && distortion < bestDistortion)
-        ) {
-          bestPadding = padding;
-          bestDistortion = distortion;
-          bestDims = [nx, ny, nz];
+        const aspectRatio = Math.max(nx, ny, nz) / Math.min(nx, ny, nz);
+        if (aspectRatio > maxAspectRatio) continue;
+        consider(nx, ny, nz, padding, distortion);
+      }
+    }
+  }
+
+  if (bestPadding === Infinity) {
+    for (let nx = 1; nx <= 20; nx++) {
+      for (let ny = 1; ny <= 20; ny++) {
+        for (let nz = 1; nz <= 20; nz++) {
+          const count = 2 * (nx * ny + ny * nz + nz * nx);
+          if (count < target) continue;
+          consider(nx, ny, nz, count - target, (nx - ny) ** 2 + (ny - nz) ** 2 + (nz - nx) ** 2);
         }
       }
     }
   }
+
   return bestDims;
 }
 
@@ -566,6 +527,21 @@ function GlobeStage({
       return geometry;
     };
 
+    const buildQuadBorderGeometry = (
+      THREE: typeof import("https://esm.sh/three@0.167.1"),
+      points: Array<{ x: number; y: number; z: number }>,
+    ) => {
+      const positions = new Float32Array([
+        points[0].x, points[0].y, points[0].z, points[1].x, points[1].y, points[1].z,
+        points[1].x, points[1].y, points[1].z, points[2].x, points[2].y, points[2].z,
+        points[2].x, points[2].y, points[2].z, points[3].x, points[3].y, points[3].z,
+        points[3].x, points[3].y, points[3].z, points[0].x, points[0].y, points[0].z,
+      ]);
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      return geometry;
+    };
+
     const cleanup = () => {
       cancelled = true;
       cancelAnimationFrame(animationFrame);
@@ -644,23 +620,24 @@ function GlobeStage({
         const geometry = buildCurvedTileGeometry(THREE, points, sphereRadius, 2);
         geometries.push(geometry);
 
-        const material = new THREE.MeshStandardMaterial({
-          color: tile.thumbnailUrl ? 0xffffff : new THREE.Color(tile.color),
-          roughness: 0.45,
-          metalness: 0.05,
-          flatShading: true,
-          side: THREE.FrontSide,
-        });
+        const material = tile.thumbnailUrl
+          ? new THREE.MeshBasicMaterial({
+              color: 0xffffff,
+              side: THREE.FrontSide,
+            })
+          : new THREE.MeshStandardMaterial({
+              color: new THREE.Color(tile.color),
+              roughness: 0.45,
+              metalness: 0.05,
+              flatShading: true,
+              side: THREE.FrontSide,
+            });
         materials.push(material);
 
         if (tile.thumbnailUrl) {
-          const placeholder = makeGlobePlaceholderTexture(THREE, renderer, tile.color, tile.id);
-          if (placeholder) {
-            textures.push(placeholder);
-            material.map = placeholder;
-          }
           const texture = loader.load(tile.thumbnailUrl, (loadedTexture) => {
-            brightenThumbnailTexture(THREE, loadedTexture, renderer);
+            loadedTexture.colorSpace = THREE.SRGBColorSpace;
+            loadedTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
             material.map = loadedTexture;
             material.needsUpdate = true;
           });
@@ -674,9 +651,9 @@ function GlobeStage({
         const mesh = new THREE.Mesh(geometry, material);
         scene.add(mesh);
 
-        const edgeGeometry = new THREE.EdgesGeometry(geometry);
-        geometries.push(edgeGeometry);
-        scene.add(new THREE.LineSegments(edgeGeometry, edgeMaterial));
+        const borderGeometry = buildQuadBorderGeometry(THREE, points);
+        geometries.push(borderGeometry);
+        scene.add(new THREE.LineSegments(borderGeometry, edgeMaterial));
       });
 
       const resize = () => {
