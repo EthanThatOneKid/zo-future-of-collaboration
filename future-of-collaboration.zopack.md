@@ -508,7 +508,7 @@ function GlobeStage({
           const u = column / segments;
           const point = normalizePoint(mixPoint(left, right, u), radius);
           positions.push(point.x, point.y, point.z);
-          uvs.push(u, 1 - v);
+          uvs.push(u, v);
         }
       }
 
@@ -593,6 +593,52 @@ function GlobeStage({
       scene.add(backLight);
 
       const sphereRadius = 12.0;
+
+      const addAtmosphereGlow = (
+        scale: number,
+        glowColor: number,
+        power: number,
+        intensity: number,
+      ) => {
+        const geometry = new THREE.SphereGeometry(sphereRadius * scale, 48, 48);
+        geometries.push(geometry);
+        const material = new THREE.ShaderMaterial({
+          uniforms: {
+            glowColor: { value: new THREE.Color(glowColor) },
+            power: { value: power },
+            intensity: { value: intensity },
+          },
+          vertexShader: `
+            varying vec3 vNormal;
+            void main() {
+              vNormal = normalize(normalMatrix * normal);
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+          `,
+          fragmentShader: `
+            uniform vec3 glowColor;
+            uniform float power;
+            uniform float intensity;
+            varying vec3 vNormal;
+            void main() {
+              float rim = pow(clamp(1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0))), 0.0, 1.0), power);
+              gl_FragColor = vec4(glowColor, rim * intensity);
+            }
+          `,
+          side: THREE.BackSide,
+          transparent: true,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        });
+        materials.push(material);
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.renderOrder = 1;
+        scene.add(mesh);
+      };
+
+      addAtmosphereGlow(1.06, 0x7ecfff, 2.8, 0.42);
+      addAtmosphereGlow(1.14, 0x2f6fd4, 1.5, 0.18);
+
       const [nx, ny, nz] = findCuboidSubdivisions(tiles.length);
       const totalQuadsCount = 2 * (nx * ny + ny * nz + nz * nx);
 
@@ -684,7 +730,7 @@ function GlobeStage({
   }, [tiles, debugMode]);
 
   return (
-    <div className="relative min-h-[720px] overflow-hidden bg-[radial-gradient(circle_at_50%_40%,rgba(21,40,66,.75),rgba(8,8,10,1)_72%)]">
+    <div className="relative min-h-[720px] overflow-hidden bg-[radial-gradient(circle_at_50%_42%,rgba(46,120,210,.28),rgba(21,40,66,.75)_38%,rgba(8,8,10,1)_72%)]">
       <div ref={containerRef} className="absolute inset-0" />
       <div className="pointer-events-none absolute left-4 top-4 rounded border border-white/10 bg-black/35 px-3 py-2 font-mono text-xs uppercase tracking-[0.2em] text-white/65 backdrop-blur-sm">
         globe mode · orbit controls
