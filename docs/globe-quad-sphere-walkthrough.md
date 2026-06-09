@@ -24,7 +24,7 @@ globeTiles = tiles.slice(0, Math.min(gridSize, EXAMPLE_PROJECT_COUNT));
 
 The tile-count slider still controls the grid; the debug panel notes when globe is capped (`globe shows first 30 examples`).
 
-Globe mode supports **orbit controls plus raycast hover**: hovering a face highlights its border in cyan and syncs the footer preview panel. Auto-rotate pauses while a tile is hovered.
+Globe mode supports **orbit controls plus click-to-select**: clicking a face highlights its border in cyan and pins the footer preview panel until another tile is selected. Auto-rotate pauses while a tile is selected.
 
 ## Algorithm
 
@@ -106,6 +106,6 @@ Screenshot: [globe-quad-sphere-screenshot.png](./globe-quad-sphere-screenshot.pn
 ## Known limitations / follow-ups
 
 - **Globe is capped at 30 examples** until more packs and thumbnails exist in `examples/` (regenerate via [`thumbnail-workflow.md`](./thumbnail-workflow.md))
-- **Hover preview** — raycast hover highlights a face border and updates the footer preview; use grid view for click-through to Zo spaces
+- **Click-to-select preview** — click a face to pin its border highlight and footer preview; open projects via the preview panel link or use grid view for direct click-through
 - **Local serve without `--handle`** leaves `{{HANDLE}}` in example URLs
 - **2 wrap-filled faces** at 30 examples duplicate two thumbnails structurally (badge still reports example count separately)

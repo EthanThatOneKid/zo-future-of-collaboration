@@ -179,16 +179,120 @@ function PortalIframe({ tile, scale }: { tile: Tile; scale: number }) {
   );
 }
 
+function TileDetailPanel({
+  tile,
+  hasProject,
+  mounted,
+  viewMode,
+  cacheCount,
+}: {
+  tile: Tile | null;
+  hasProject: boolean;
+  mounted: boolean;
+  viewMode: ViewMode;
+  cacheCount: number;
+}) {
+  if (!tile) {
+    return (
+      <div className="bg-[#222] p-5 font-mono text-sm leading-6 text-[#bdbdbd] sm:p-7">
+        <div className="text-[#00a8ff]">rules</div>
+        <p className="mt-3">
+          {viewMode === "globe"
+            ? "Drag to orbit the collaboration globe. Click a face to select it — the cyan border and preview below stay pinned until you pick another tile. Auto-rotate pauses while a tile is selected. Open the project link in the preview panel, or switch to grid view for direct click-through."
+            : `Hover a populated tile to preview its portal in the panel below. Click (or middle/⌘-click) to open the underlying Zo space in a new tab. Portals stay mounted for the ${MAX_MOUNTED_PORTALS} most recently visited tiles, so returning to a tile is instant. Use the query param to compare different tile counts quickly.`}
+        </p>
+        <div className="mt-4 font-mono text-xs uppercase tracking-[0.16em] text-white/45">
+          cache: {cacheCount} / {MAX_MOUNTED_PORTALS} mounted
+        </div>
+        <a className="mt-6 inline-block rounded border border-[#00a8ff] px-3 py-2 text-[#00a8ff] hover:bg-[#00a8ff] hover:text-black" href="/examples">
+          Open live examples index
+        </a>
+      </div>
+    );
+  }
+
+  const metadata = [
+    { label: "tile", value: `#${tile.id}` },
+    { label: "status", value: tile.status },
+    { label: "scene", value: String(tile.scene) },
+    { label: "portal", value: mounted ? "mounted" : "thumbnail" },
+  ];
+
+  return (
+    <div className="bg-[#222] p-5 font-mono text-sm leading-6 text-[#bdbdbd] sm:p-7">
+      <div className="flex items-baseline justify-between gap-3">
+        <div className="text-[#00a8ff]">tile #{tile.id}</div>
+        <div className="text-[10px] uppercase tracking-[0.22em] text-white/35">
+          {viewMode === "globe" ? "selected" : "hovering"}
+        </div>
+      </div>
+
+      <h2 className="mt-4 text-2xl font-black tracking-[-0.04em] text-white sm:text-3xl">
+        {tile.projectTitle}
+      </h2>
+
+      <div className="mt-3 text-base text-white/80">
+        <span className="text-white">{tile.ownerName}</span>
+        <span className="text-white/35"> · </span>
+        <span className="text-[#bdbdbd]">{tile.zoUsername}</span>
+      </div>
+
+      {hasProject ? (
+        <a
+          className="mt-4 block truncate text-[#00a8ff] hover:text-white"
+          href={tile.projectUrl}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {tile.projectUrl} ↗
+        </a>
+      ) : (
+        <p className="mt-4 text-white/45">Unclaimed slot — no Zo space yet.</p>
+      )}
+
+      <dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-white/10 pt-5 sm:grid-cols-4">
+        {metadata.map(({ label, value }) => (
+          <div key={label}>
+            <dt className="text-[10px] uppercase tracking-[0.22em] text-white/35">{label}</dt>
+            <dd className="mt-1 text-xs uppercase tracking-[0.12em] text-white/70">{value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        {hasProject ? (
+          <a
+            className="inline-block rounded border border-[#00a8ff] px-3 py-2 text-[#00a8ff] hover:bg-[#00a8ff] hover:text-black"
+            href={tile.projectUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open Zo space
+          </a>
+        ) : null}
+        <a
+          className="inline-block rounded border border-white/15 px-3 py-2 text-white/60 hover:border-white/30 hover:text-white"
+          href="/examples"
+        >
+          Examples index
+        </a>
+      </div>
+    </div>
+  );
+}
+
 function PreviewPanel({
   tile,
   hasProject,
   mounted,
   isActive,
+  label,
 }: {
   tile: Tile;
   hasProject: boolean;
   mounted: boolean;
   isActive: boolean;
+  label: string;
 }) {
   return (
     <div
@@ -211,9 +315,7 @@ function PreviewPanel({
         )}
       </div>
       <div className="shrink-0 border-t border-white/10 bg-[#111] px-4 py-3 sm:px-5">
-        <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#00a8ff]">
-          {isActive ? "Hover Preview" : "Featured"}
-        </p>
+        <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#00a8ff]">{label}</p>
         <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
           <span className="text-lg font-black tracking-[-0.04em] text-white sm:text-xl">
             #{tile.id} {tile.projectTitle}
@@ -541,36 +643,36 @@ type GlobeTileEntry = {
 function GlobeStage({
   tiles,
   debugMode = false,
-  hoveredId = null,
-  onHover,
+  selectedId = null,
+  onSelect,
 }: {
   tiles: Tile[];
   debugMode?: boolean;
-  hoveredId?: number | null;
-  onHover?: (tile: Tile | null) => void;
+  selectedId?: number | null;
+  onSelect?: (tile: Tile) => void;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const tileEntriesRef = useRef<GlobeTileEntry[]>([]);
   const controlsRef = useRef<{ autoRotate: boolean } | null>(null);
-  const onHoverRef = useRef(onHover);
-  const hoveredIdRef = useRef(hoveredId);
+  const onSelectRef = useRef(onSelect);
+  const selectedIdRef = useRef(selectedId);
   const [nx, ny, nz] = findCuboidSubdivisions(tiles.length);
   const faceCount = 2 * (nx * ny + ny * nz + nz * nx);
   const exampleCount = tiles.filter((tile) => tile.thumbnailUrl).length;
 
-  onHoverRef.current = onHover;
-  hoveredIdRef.current = hoveredId;
+  onSelectRef.current = onSelect;
+  selectedIdRef.current = selectedId;
 
   useEffect(() => {
     for (const entry of tileEntriesRef.current) {
-      const isHovered = entry.tileId === hoveredId;
-      entry.borderMaterial.color.setHex(isHovered ? 0x00a8ff : 0xffffff);
-      entry.borderMaterial.opacity = isHovered ? 0.95 : 0.18;
+      const isSelected = entry.tileId === selectedId;
+      entry.borderMaterial.color.setHex(isSelected ? 0x00a8ff : 0xffffff);
+      entry.borderMaterial.opacity = isSelected ? 0.95 : 0.18;
     }
     if (controlsRef.current) {
-      controlsRef.current.autoRotate = hoveredId === null;
+      controlsRef.current.autoRotate = selectedId === null;
     }
-  }, [hoveredId]);
+  }, [selectedId]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -826,7 +928,8 @@ function GlobeStage({
 
       const raycaster = new THREE.Raycaster();
       const pointer = new THREE.Vector2();
-      let isDragging = false;
+      let pointerDownX = 0;
+      let pointerDownY = 0;
 
       const findTileById = (id: number) => tiles.find((tile) => tile.id === id) ?? null;
 
@@ -836,50 +939,41 @@ function GlobeStage({
         pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
       };
 
-      const handlePointerMove = (event: PointerEvent) => {
-        if (isDragging || !onHoverRef.current) return;
+      const handlePointerDown = (event: PointerEvent) => {
+        pointerDownX = event.clientX;
+        pointerDownY = event.clientY;
+      };
+
+      const handlePointerUp = (event: PointerEvent) => {
+        if (!onSelectRef.current) return;
+        const moved = Math.hypot(event.clientX - pointerDownX, event.clientY - pointerDownY);
+        if (moved > 6) return;
+
         updatePointer(event);
         raycaster.setFromCamera(pointer, camera);
         const hits = raycaster.intersectObjects(tileMeshes, false);
         if (hits.length > 0) {
           const tileId = hits[0].object.userData.tileId as number;
-          onHoverRef.current(findTileById(tileId));
-        } else {
-          onHoverRef.current(null);
+          const tile = findTileById(tileId);
+          if (tile) onSelectRef.current(tile);
         }
       };
 
-      const handlePointerLeave = () => {
-        onHoverRef.current?.(null);
-      };
-
-      const handleControlStart = () => {
-        isDragging = true;
-      };
-
-      const handleControlEnd = () => {
-        isDragging = false;
-      };
-
-      controls.addEventListener("start", handleControlStart);
-      controls.addEventListener("end", handleControlEnd);
-      renderer.domElement.addEventListener("pointermove", handlePointerMove);
-      renderer.domElement.addEventListener("pointerleave", handlePointerLeave);
+      renderer.domElement.addEventListener("pointerdown", handlePointerDown);
+      renderer.domElement.addEventListener("pointerup", handlePointerUp);
 
       removePointerHandlers = () => {
-        controls.removeEventListener("start", handleControlStart);
-        controls.removeEventListener("end", handleControlEnd);
-        renderer.domElement.removeEventListener("pointermove", handlePointerMove);
-        renderer.domElement.removeEventListener("pointerleave", handlePointerLeave);
+        renderer.domElement.removeEventListener("pointerdown", handlePointerDown);
+        renderer.domElement.removeEventListener("pointerup", handlePointerUp);
       };
 
       for (const entry of tileEntriesRef.current) {
-        const isHovered = entry.tileId === hoveredIdRef.current;
-        entry.borderMaterial.color.setHex(isHovered ? 0x00a8ff : 0xffffff);
-        entry.borderMaterial.opacity = isHovered ? 0.95 : 0.18;
+        const isSelected = entry.tileId === selectedIdRef.current;
+        entry.borderMaterial.color.setHex(isSelected ? 0x00a8ff : 0xffffff);
+        entry.borderMaterial.opacity = isSelected ? 0.95 : 0.18;
       }
       if (controlsRef.current) {
-        controlsRef.current.autoRotate = hoveredIdRef.current === null;
+        controlsRef.current.autoRotate = selectedIdRef.current === null;
       }
 
       const resize = () => {
@@ -917,7 +1011,7 @@ function GlobeStage({
     <div className="relative min-h-[720px] overflow-hidden bg-[radial-gradient(circle_at_50%_42%,rgba(46,120,210,.28),rgba(21,40,66,.75)_38%,rgba(8,8,10,1)_72%)]">
       <div ref={containerRef} className="absolute inset-0" />
       <div className="pointer-events-none absolute left-4 top-4 rounded border border-white/10 bg-black/35 px-3 py-2 font-mono text-xs uppercase tracking-[0.2em] text-white/65 backdrop-blur-sm">
-        globe mode · orbit + hover
+        globe mode · orbit + click
       </div>
       <div className="pointer-events-none absolute right-4 top-4 rounded border border-white/10 bg-black/35 px-3 py-2 font-mono text-xs uppercase tracking-[0.2em] text-white/65 backdrop-blur-sm">
         {exampleCount} examples · {faceCount} faces
@@ -967,11 +1061,20 @@ function FutureOfCollaborationContent() {
     [tiles, gridSize],
   );
   const [hoveredId, setHoveredId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [lruIds, setLruIds] = useState<number[]>([]);
 
   useEffect(() => {
     setHoveredId(null);
+    setSelectedId(null);
   }, [viewMode]);
+
+  const mountPreview = (id: number) => {
+    setLruIds((prev) => {
+      const without = prev.filter((entryId) => entryId !== id);
+      return [id, ...without].slice(0, MAX_MOUNTED_PORTALS);
+    });
+  };
 
   const handleHover = (tile: Tile | null) => {
     if (!tile) {
@@ -979,17 +1082,30 @@ function FutureOfCollaborationContent() {
       return;
     }
     setHoveredId(tile.id);
-    setLruIds((prev) => {
-      const without = prev.filter((id) => id !== tile.id);
-      return [tile.id, ...without].slice(0, MAX_MOUNTED_PORTALS);
-    });
+    mountPreview(tile.id);
+  };
+
+  const handleSelect = (tile: Tile) => {
+    setSelectedId(tile.id);
+    mountPreview(tile.id);
   };
 
   const isMounted = (id: number) => lruIds.includes(id);
   const liveCount = tiles.filter((tile) => tile.status === "live").length;
-  const previewTile: Tile = hoveredId !== null ? tiles.find((t) => t.id === hoveredId) ?? tiles[0] : tiles[0];
+  const activePreviewId = viewMode === "globe" ? selectedId : hoveredId;
+  const activeTile =
+    activePreviewId !== null ? tiles.find((t) => t.id === activePreviewId) ?? null : null;
+  const previewTile: Tile = activeTile ?? tiles[0];
   const previewHasProject = previewTile.status !== "empty";
   const previewMounted = isMounted(previewTile.id);
+  const previewLabel =
+    viewMode === "globe"
+      ? selectedId !== null
+        ? "Selected Preview"
+        : "Featured"
+      : hoveredId !== null
+        ? "Hover Preview"
+        : "Featured";
 
   return (
     <main className="min-h-screen bg-[#202020] text-[#d7d7d7]">
@@ -1107,8 +1223,8 @@ function FutureOfCollaborationContent() {
             <GlobeStage
               tiles={globeTiles}
               debugMode={debugMode}
-              hoveredId={hoveredId}
-              onHover={handleHover}
+              selectedId={selectedId}
+              onSelect={handleSelect}
             />
           )}
 
@@ -1117,22 +1233,16 @@ function FutureOfCollaborationContent() {
               tile={previewTile}
               hasProject={previewHasProject}
               mounted={previewMounted}
-              isActive={hoveredId !== null}
+              isActive={activePreviewId !== null}
+              label={previewLabel}
             />
-            <div className="bg-[#222] p-5 font-mono text-sm leading-6 text-[#bdbdbd] sm:p-7">
-              <div className="text-[#00a8ff]">rules</div>
-              <p className="mt-3">
-                {viewMode === "globe"
-                  ? "Drag to orbit the collaboration globe. Hover a face to highlight it and preview the project below. Auto-rotate pauses while you hover. Switch to grid view for click-through to Zo spaces."
-                  : `Hover a populated tile to preview its portal in the panel below. Click (or middle/⌘-click) to open the underlying Zo space in a new tab. Portals stay mounted for the ${MAX_MOUNTED_PORTALS} most recently visited tiles, so returning to a tile is instant. Use the query param to compare different tile counts quickly.`}
-              </p>
-              <div className="mt-4 font-mono text-xs uppercase tracking-[0.16em] text-white/45">
-                cache: {lruIds.length} / {MAX_MOUNTED_PORTALS} mounted
-              </div>
-              <a className="mt-6 inline-block rounded border border-[#00a8ff] px-3 py-2 text-[#00a8ff] hover:bg-[#00a8ff] hover:text-black" href="/examples">
-                Open live examples index
-              </a>
-            </div>
+            <TileDetailPanel
+              tile={activeTile}
+              hasProject={activeTile !== null && activeTile.status !== "empty"}
+              mounted={activeTile !== null && isMounted(activeTile.id)}
+              viewMode={viewMode}
+              cacheCount={lruIds.length}
+            />
           </footer>
         </section>
       </div>
