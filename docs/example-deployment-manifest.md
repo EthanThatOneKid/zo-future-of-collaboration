@@ -14,6 +14,10 @@
 - Confirmed Zo Space route list includes all 30 `/examples/*` routes plus the `/examples` index.
 - Confirmed `get_space_errors()` returned no route errors after deployment.
 
+## Thumbnails
+
+After deploying or visually changing example packs, regenerate WebP previews with the capture script documented in [`thumbnail-workflow.md`](./thumbnail-workflow.md). Outputs land in `examples/thumbnails/` and are referenced by slug from `future-of-collaboration.zopack.md`.
+
 ## Routes
 
 | # | Pack | Live URL | Source |

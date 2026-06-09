@@ -96,6 +96,8 @@ Open visual variants:
 - Striped gradient groups rather than strict left-to-right tile order.
 - Browser preview-in-tile should use a portal-style embedded preview for arbitrary URLs where possible. The product requirement is the monochrome-to-polychrome transition; the portal implementation needs browser-support validation.
 
+**Prototype implementation:** the current Zo Space pack (`future-of-collaboration.zopack.md`) uses prerendered WebP thumbnails for idle grid/globe tiles and mounts live iframe portals only on hover (capped). Generation is documented in [`thumbnail-workflow.md`](./thumbnail-workflow.md).
+
 ### Merch Workflow
 
 Separate workflow, not part of the primary event app for v1:

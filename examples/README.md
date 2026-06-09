@@ -105,6 +105,22 @@ Get-ChildItem examples/*.zopack.md | ForEach-Object {
 | [ct-166-ascii-art-lite.zopack.md](ct-166-ascii-art-lite.zopack.md) | Animated ASCII from procedural field | [#166](https://thecodingtrain.com/challenges/166-image-to-ascii) |
 | [ct-169-pi-in-the-sky.zopack.md](ct-169-pi-in-the-sky.zopack.md) | Catch falling π digits | [#169](https://thecodingtrain.com/challenges/169-pi-in-the-sky-game) |
 
+## Thumbnails
+
+Grid and globe views in `future-of-collaboration.zopack.md` use prerendered WebP previews from `examples/thumbnails/` instead of loading every example iframe at once.
+
+To regenerate after visual changes or when adding a pack:
+
+```bash
+node scripts/capture-example-thumbnails.mjs \
+  --route-base https://etok.zo.space/examples \
+  --public-base https://etok.zo.space/examples
+```
+
+Full pipeline, prerequisites, defaults, and troubleshooting: [`docs/thumbnail-workflow.md`](../docs/thumbnail-workflow.md).
+
+After adding a pack you must also append its slug to `exampleProjects` in `future-of-collaboration.zopack.md`.
+
 ## Future additions
 
 Optional [Nature of Code](https://natureofcode.com/) chapter packs and additional CT challenges (ML-heavy, 3D, or long builds deferred).
