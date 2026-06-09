@@ -7,6 +7,7 @@ Planning and design-doc repo for the Zo event experience: a standalone app where
 - `docs/design-doc.md` - current product, design, engineering, event-ops, and open-question plan.
 - `docs/example-deployment-manifest.md` - record of the batch Zo Space deployment for the example packs.
 - `docs/thumbnail-workflow.md` - screenshot-to-WebP pipeline for testing thumbnail-first portal rendering.
+- `docs/globe-quad-sphere-walkthrough.md` - quad-sphere globe algorithm, rendering stack, and verification notes for globe mode.
 - `examples/` - visual [Coding Train](https://thecodingtrain.com/challenges)-inspired [zopack](https://www.zo.computer/skills/zopack) starters for attendee Zo spaces (see `examples/README.md`).
 - `examples/thumbnails/` - generated WebP thumbnails and manifest for the deployed example spaces.
 - `examples-index.zopack.md` - public index route for the deployed example gallery at `https://etok.zo.space/examples`.

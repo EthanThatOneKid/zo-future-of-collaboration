@@ -235,8 +235,16 @@ function generateSpherifiedCuboidQuads(
   ny: number,
   nz: number,
   radius: number
-): Array<Array<{ x: number; y: number; z: number }>> {
-  const quads: Array<Array<{ x: number; y: number; z: number }>> = [];
+): Array<{
+  points: Array<{ x: number; y: number; z: number }>;
+  flipU?: boolean;
+  flipV?: boolean;
+}> {
+  const quads: Array<{
+    points: Array<{ x: number; y: number; z: number }>;
+    flipU?: boolean;
+    flipV?: boolean;
+  }> = [];
 
   const spherify = (x: number, y: number, z: number) => {
     const len = Math.hypot(x, y, z) || 1;
@@ -247,6 +255,13 @@ function generateSpherifiedCuboidQuads(
     };
   };
 
+  const pushQuad = (
+    points: Array<{ x: number; y: number; z: number }>,
+    uv: { flipU?: boolean; flipV?: boolean } = {},
+  ) => {
+    quads.push({ points, ...uv });
+  };
+
   // 1. Front Face (Z = 1)
   for (let i = 0; i < nx; i++) {
     for (let j = 0; j < ny; j++) {
@@ -254,7 +269,7 @@ function generateSpherifiedCuboidQuads(
       const x1 = -1 + (2 * (i + 1)) / nx;
       const y0 = -1 + (2 * j) / ny;
       const y1 = -1 + (2 * (j + 1)) / ny;
-      quads.push([
+      pushQuad([
         spherify(x0, y0, 1),
         spherify(x1, y0, 1),
         spherify(x1, y1, 1),
@@ -270,12 +285,15 @@ function generateSpherifiedCuboidQuads(
       const x1 = -1 + (2 * (i + 1)) / nx;
       const y0 = -1 + (2 * j) / ny;
       const y1 = -1 + (2 * (j + 1)) / ny;
-      quads.push([
-        spherify(x1, y0, -1),
-        spherify(x0, y0, -1),
-        spherify(x0, y1, -1),
-        spherify(x1, y1, -1),
-      ]);
+      pushQuad(
+        [
+          spherify(x1, y0, -1),
+          spherify(x0, y0, -1),
+          spherify(x0, y1, -1),
+          spherify(x1, y1, -1),
+        ],
+        { flipU: true },
+      );
     }
   }
 
@@ -286,12 +304,15 @@ function generateSpherifiedCuboidQuads(
       const z1 = -1 + (2 * (k + 1)) / nz;
       const y0 = -1 + (2 * j) / ny;
       const y1 = -1 + (2 * (j + 1)) / ny;
-      quads.push([
-        spherify(1, y0, z1),
-        spherify(1, y0, z0),
-        spherify(1, y1, z0),
-        spherify(1, y1, z1),
-      ]);
+      pushQuad(
+        [
+          spherify(1, y0, z1),
+          spherify(1, y0, z0),
+          spherify(1, y1, z0),
+          spherify(1, y1, z1),
+        ],
+        { flipU: true },
+      );
     }
   }
 
@@ -302,7 +323,7 @@ function generateSpherifiedCuboidQuads(
       const z1 = -1 + (2 * (k + 1)) / nz;
       const y0 = -1 + (2 * j) / ny;
       const y1 = -1 + (2 * (j + 1)) / ny;
-      quads.push([
+      pushQuad([
         spherify(-1, y0, z0),
         spherify(-1, y0, z1),
         spherify(-1, y1, z1),
@@ -318,12 +339,15 @@ function generateSpherifiedCuboidQuads(
       const x1 = -1 + (2 * (i + 1)) / nx;
       const z0 = -1 + (2 * k) / nz;
       const z1 = -1 + (2 * (k + 1)) / nz;
-      quads.push([
-        spherify(x0, 1, z1),
-        spherify(x1, 1, z1),
-        spherify(x1, 1, z0),
-        spherify(x0, 1, z0),
-      ]);
+      pushQuad(
+        [
+          spherify(x0, 1, z1),
+          spherify(x1, 1, z1),
+          spherify(x1, 1, z0),
+          spherify(x0, 1, z0),
+        ],
+        { flipV: true },
+      );
     }
   }
 
@@ -334,12 +358,15 @@ function generateSpherifiedCuboidQuads(
       const x1 = -1 + (2 * (i + 1)) / nx;
       const z0 = -1 + (2 * k) / nz;
       const z1 = -1 + (2 * (k + 1)) / nz;
-      quads.push([
-        spherify(x1, -1, z1),
-        spherify(x0, -1, z1),
-        spherify(x0, -1, z0),
-        spherify(x1, -1, z0),
-      ]);
+      pushQuad(
+        [
+          spherify(x1, -1, z1),
+          spherify(x0, -1, z1),
+          spherify(x0, -1, z0),
+          spherify(x1, -1, z0),
+        ],
+        { flipU: true, flipV: true },
+      );
     }
   }
 
@@ -493,8 +520,10 @@ function GlobeStage({
       THREE: typeof import("https://esm.sh/three@0.167.1"),
       points: Array<{ x: number; y: number; z: number }>,
       radius: number,
-      segments = 2,
+      segments = 3,
+      uvFlip: { flipU?: boolean; flipV?: boolean } = {},
     ) => {
+      const { flipU = false, flipV = false } = uvFlip;
       const positions: number[] = [];
       const uvs: number[] = [];
       const indices: number[] = [];
@@ -508,7 +537,7 @@ function GlobeStage({
           const u = column / segments;
           const point = normalizePoint(mixPoint(left, right, u), radius);
           positions.push(point.x, point.y, point.z);
-          uvs.push(u, v);
+          uvs.push(flipU ? 1 - u : u, flipV ? 1 - v : v);
         }
       }
 
@@ -583,16 +612,8 @@ function GlobeStage({
       controls.autoRotateSpeed = 0.4;
       controls.target.set(0, 0, 0);
 
-      const ambient = new THREE.AmbientLight(0xffffff, 2.1);
-      scene.add(ambient);
-      const directional = new THREE.DirectionalLight(0x9fd8ff, 1.8);
-      directional.position.set(7, 12, 10);
-      scene.add(directional);
-      const backLight = new THREE.DirectionalLight(0x3366ff, 0.7);
-      backLight.position.set(-12, -8, -10);
-      scene.add(backLight);
-
       const sphereRadius = 12.0;
+      let outerGlowMaterial: { uniforms: { intensity: { value: number } } } | null = null;
 
       const addAtmosphereGlow = (
         scale: number,
@@ -634,10 +655,11 @@ function GlobeStage({
         const mesh = new THREE.Mesh(geometry, material);
         mesh.renderOrder = 1;
         scene.add(mesh);
+        return material;
       };
 
-      addAtmosphereGlow(1.06, 0x7ecfff, 2.8, 0.42);
-      addAtmosphereGlow(1.14, 0x2f6fd4, 1.5, 0.18);
+      addAtmosphereGlow(1.06, 0x7ecfff, 2.8, 0.38);
+      outerGlowMaterial = addAtmosphereGlow(1.14, 0x2f6fd4, 1.5, 0.16);
 
       const [nx, ny, nz] = findCuboidSubdivisions(tiles.length);
       const totalQuadsCount = 2 * (nx * ny + ny * nz + nz * nx);
@@ -657,13 +679,13 @@ function GlobeStage({
       const edgeMaterial = new THREE.LineBasicMaterial({
         color: 0xffffff,
         transparent: true,
-        opacity: 0.35,
+        opacity: 0.18,
       });
       materials.push(edgeMaterial);
 
-      quads.forEach((points, tileIndex) => {
+      quads.forEach(({ points, flipU, flipV }, tileIndex) => {
         const tile = paddedTiles[tileIndex];
-        const geometry = buildCurvedTileGeometry(THREE, points, sphereRadius, 2);
+        const geometry = buildCurvedTileGeometry(THREE, points, sphereRadius, 3, { flipU, flipV });
         geometries.push(geometry);
 
         const material = tile.thumbnailUrl
@@ -717,6 +739,10 @@ function GlobeStage({
 
       const tick = () => {
         if (cancelled) return;
+        if (outerGlowMaterial) {
+          const pulse = Math.sin(performance.now() * 0.001 * 1.1) * 0.04;
+          outerGlowMaterial.uniforms.intensity.value = 0.16 + pulse;
+        }
         controls.update();
         renderer.render(scene, camera);
         animationFrame = window.requestAnimationFrame(tick);
@@ -955,7 +981,11 @@ function FutureOfCollaborationContent() {
             </div>
             <div className="bg-[#222] p-5 font-mono text-sm leading-6 text-[#bdbdbd] sm:p-7">
               <div className="text-[#00a8ff]">rules</div>
-              <p className="mt-3">Hover a populated tile to preview its portal in the panel below. Click (or middle/⌘-click) to open the underlying Zo space in a new tab. Portals stay mounted for the {MAX_MOUNTED_PORTALS} most recently visited tiles, so returning to a tile is instant. Use the query param to compare different tile counts quickly.</p>
+              <p className="mt-3">
+                {viewMode === "globe"
+                  ? "Drag to orbit the collaboration globe. Auto-rotate keeps the artifact in motion. Switch to grid view to hover tiles, preview portals, and open Zo spaces."
+                  : `Hover a populated tile to preview its portal in the panel below. Click (or middle/⌘-click) to open the underlying Zo space in a new tab. Portals stay mounted for the ${MAX_MOUNTED_PORTALS} most recently visited tiles, so returning to a tile is instant. Use the query param to compare different tile counts quickly.`}
+              </p>
               <div className="mt-4 font-mono text-xs uppercase tracking-[0.16em] text-white/45">
                 cache: {lruIds.length} / {MAX_MOUNTED_PORTALS} mounted
               </div>
