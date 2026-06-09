@@ -74,10 +74,8 @@ const names = [
 ];
 
 const navGroups = [
-  { label: "Event", items: ["overview", "live grid", "claims", "demo mode", "event info"] },
-  { label: "Build", items: ["skills", "api", "sqlite", "moderation"] },
-  { label: "Community", items: ["attendees", "projects", "partners", "export"] },
-  { label: "Code", items: ["github", "docs", "deploy"] },
+  { label: "Event", items: ["event info"] },
+  { label: "Code", items: ["github"] },
 ];
 
 function mix(a: number, b: number, t: number) {
@@ -178,6 +176,71 @@ function PortalIframe({ tile, scale }: { tile: Tile; scale: number }) {
       className="pointer-events-none absolute left-0 top-0 border-0"
       style={{ width: size, height: size, transform: `scale(${scale})`, transformOrigin: "0 0" }}
     />
+  );
+}
+
+function PreviewPanel({
+  tile,
+  hasProject,
+  mounted,
+  isActive,
+}: {
+  tile: Tile;
+  hasProject: boolean;
+  mounted: boolean;
+  isActive: boolean;
+}) {
+  return (
+    <div
+      className={`relative flex min-h-[420px] flex-col overflow-hidden bg-black transition-shadow duration-200 ${
+        isActive ? "ring-2 ring-[#00a8ff] ring-inset" : ""
+      }`}
+    >
+      <div className="relative min-h-0 flex-1">
+        {hasProject && mounted ? (
+          <div className="absolute inset-0 overflow-hidden">
+            <PortalIframe tile={tile} scale={0.42} />
+          </div>
+        ) : hasProject ? (
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${tile.thumbnailUrl})` }}
+          />
+        ) : (
+          <div className="absolute inset-0" style={{ backgroundColor: tile.color }} />
+        )}
+      </div>
+      <div className="shrink-0 border-t border-white/10 bg-[#111] px-4 py-3 sm:px-5">
+        <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#00a8ff]">
+          {isActive ? "Hover Preview" : "Featured"}
+        </p>
+        <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <span className="text-lg font-black tracking-[-0.04em] text-white sm:text-xl">
+            #{tile.id} {tile.projectTitle}
+          </span>
+          <span className="text-sm text-[#bdbdbd]">
+            · {tile.ownerName} · {tile.zoUsername}
+          </span>
+        </div>
+        {hasProject ? (
+          <a
+            className="mt-1 inline-block max-w-full truncate font-mono text-xs text-[#00a8ff] hover:text-white sm:text-sm"
+            href={tile.projectUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {tile.projectUrl} ↗
+          </a>
+        ) : (
+          <a
+            className="mt-1 inline-block max-w-full truncate font-mono text-xs text-[#00a8ff] hover:text-white sm:text-sm"
+            href="https://{{HANDLE}}.zo.space/examples"
+          >
+            https://{{HANDLE}}.zo.space/examples
+          </a>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -470,17 +533,44 @@ function TileCard({
 }
 
 
+type GlobeTileEntry = {
+  tileId: number;
+  borderMaterial: { color: { setHex: (hex: number) => void }; opacity: number };
+};
+
 function GlobeStage({
   tiles,
   debugMode = false,
+  hoveredId = null,
+  onHover,
 }: {
   tiles: Tile[];
   debugMode?: boolean;
+  hoveredId?: number | null;
+  onHover?: (tile: Tile | null) => void;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const tileEntriesRef = useRef<GlobeTileEntry[]>([]);
+  const controlsRef = useRef<{ autoRotate: boolean } | null>(null);
+  const onHoverRef = useRef(onHover);
+  const hoveredIdRef = useRef(hoveredId);
   const [nx, ny, nz] = findCuboidSubdivisions(tiles.length);
   const faceCount = 2 * (nx * ny + ny * nz + nz * nx);
   const exampleCount = tiles.filter((tile) => tile.thumbnailUrl).length;
+
+  onHoverRef.current = onHover;
+  hoveredIdRef.current = hoveredId;
+
+  useEffect(() => {
+    for (const entry of tileEntriesRef.current) {
+      const isHovered = entry.tileId === hoveredId;
+      entry.borderMaterial.color.setHex(isHovered ? 0x00a8ff : 0xffffff);
+      entry.borderMaterial.opacity = isHovered ? 0.95 : 0.18;
+    }
+    if (controlsRef.current) {
+      controlsRef.current.autoRotate = hoveredId === null;
+    }
+  }, [hoveredId]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -571,8 +661,12 @@ function GlobeStage({
       return geometry;
     };
 
+    let removePointerHandlers: (() => void) | null = null;
+
     const cleanup = () => {
       cancelled = true;
+      removePointerHandlers?.();
+      removePointerHandlers = null;
       cancelAnimationFrame(animationFrame);
       resizeObserver?.disconnect();
       controls?.dispose?.();
@@ -581,6 +675,8 @@ function GlobeStage({
       for (const texture of textures) texture.dispose?.();
       renderer?.dispose?.();
       if (renderer?.domElement?.parentNode === container) container.removeChild(renderer.domElement);
+      tileEntriesRef.current = [];
+      controlsRef.current = null;
     };
 
     async function start() {
@@ -611,6 +707,7 @@ function GlobeStage({
       controls.autoRotate = true;
       controls.autoRotateSpeed = 0.4;
       controls.target.set(0, 0, 0);
+      controlsRef.current = controls;
 
       const sphereRadius = 12.0;
       let outerGlowMaterial: { uniforms: { intensity: { value: number } } } | null = null;
@@ -668,20 +765,13 @@ function GlobeStage({
       while (paddedTiles.length < totalQuadsCount) {
         const index = paddedTiles.length;
         const wrapSource = tiles[index % tiles.length];
-        paddedTiles.push({
-          ...wrapSource,
-          id: index + 1,
-        });
+        paddedTiles.push({ ...wrapSource });
       }
 
       const quads = generateSpherifiedCuboidQuads(nx, ny, nz, sphereRadius);
       const loader = new THREE.TextureLoader();
-      const edgeMaterial = new THREE.LineBasicMaterial({
-        color: 0xffffff,
-        transparent: true,
-        opacity: 0.18,
-      });
-      materials.push(edgeMaterial);
+      const tileMeshes: Array<{ userData: { tileId: number } }> = [];
+      tileEntriesRef.current = [];
 
       quads.forEach(({ points, flipU, flipV }, tileIndex) => {
         const tile = paddedTiles[tileIndex];
@@ -717,12 +807,80 @@ function GlobeStage({
         }
 
         const mesh = new THREE.Mesh(geometry, material);
+        mesh.userData.tileId = tile.id;
         scene.add(mesh);
+        tileMeshes.push(mesh);
+
+        const borderMaterial = new THREE.LineBasicMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0.18,
+        });
+        materials.push(borderMaterial);
+        tileEntriesRef.current.push({ tileId: tile.id, borderMaterial });
 
         const borderGeometry = buildQuadBorderGeometry(THREE, points);
         geometries.push(borderGeometry);
-        scene.add(new THREE.LineSegments(borderGeometry, edgeMaterial));
+        scene.add(new THREE.LineSegments(borderGeometry, borderMaterial));
       });
+
+      const raycaster = new THREE.Raycaster();
+      const pointer = new THREE.Vector2();
+      let isDragging = false;
+
+      const findTileById = (id: number) => tiles.find((tile) => tile.id === id) ?? null;
+
+      const updatePointer = (event: PointerEvent) => {
+        const rect = renderer.domElement.getBoundingClientRect();
+        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      };
+
+      const handlePointerMove = (event: PointerEvent) => {
+        if (isDragging || !onHoverRef.current) return;
+        updatePointer(event);
+        raycaster.setFromCamera(pointer, camera);
+        const hits = raycaster.intersectObjects(tileMeshes, false);
+        if (hits.length > 0) {
+          const tileId = hits[0].object.userData.tileId as number;
+          onHoverRef.current(findTileById(tileId));
+        } else {
+          onHoverRef.current(null);
+        }
+      };
+
+      const handlePointerLeave = () => {
+        onHoverRef.current?.(null);
+      };
+
+      const handleControlStart = () => {
+        isDragging = true;
+      };
+
+      const handleControlEnd = () => {
+        isDragging = false;
+      };
+
+      controls.addEventListener("start", handleControlStart);
+      controls.addEventListener("end", handleControlEnd);
+      renderer.domElement.addEventListener("pointermove", handlePointerMove);
+      renderer.domElement.addEventListener("pointerleave", handlePointerLeave);
+
+      removePointerHandlers = () => {
+        controls.removeEventListener("start", handleControlStart);
+        controls.removeEventListener("end", handleControlEnd);
+        renderer.domElement.removeEventListener("pointermove", handlePointerMove);
+        renderer.domElement.removeEventListener("pointerleave", handlePointerLeave);
+      };
+
+      for (const entry of tileEntriesRef.current) {
+        const isHovered = entry.tileId === hoveredIdRef.current;
+        entry.borderMaterial.color.setHex(isHovered ? 0x00a8ff : 0xffffff);
+        entry.borderMaterial.opacity = isHovered ? 0.95 : 0.18;
+      }
+      if (controlsRef.current) {
+        controlsRef.current.autoRotate = hoveredIdRef.current === null;
+      }
 
       const resize = () => {
         if (!renderer || !camera || !container) return;
@@ -759,7 +917,7 @@ function GlobeStage({
     <div className="relative min-h-[720px] overflow-hidden bg-[radial-gradient(circle_at_50%_42%,rgba(46,120,210,.28),rgba(21,40,66,.75)_38%,rgba(8,8,10,1)_72%)]">
       <div ref={containerRef} className="absolute inset-0" />
       <div className="pointer-events-none absolute left-4 top-4 rounded border border-white/10 bg-black/35 px-3 py-2 font-mono text-xs uppercase tracking-[0.2em] text-white/65 backdrop-blur-sm">
-        globe mode · orbit controls
+        globe mode · orbit + hover
       </div>
       <div className="pointer-events-none absolute right-4 top-4 rounded border border-white/10 bg-black/35 px-3 py-2 font-mono text-xs uppercase tracking-[0.2em] text-white/65 backdrop-blur-sm">
         {exampleCount} examples · {faceCount} faces
@@ -946,44 +1104,26 @@ function FutureOfCollaborationContent() {
               ))}
             </div>
           ) : (
-            <GlobeStage tiles={globeTiles} debugMode={debugMode} />
+            <GlobeStage
+              tiles={globeTiles}
+              debugMode={debugMode}
+              hoveredId={hoveredId}
+              onHover={handleHover}
+            />
           )}
 
           <footer className="grid gap-px bg-[#151515] md:grid-cols-[1fr_1fr]">
-            <div className="relative min-h-[420px] overflow-hidden bg-black">
-              {previewHasProject && previewMounted ? (
-                <div className="absolute inset-0">
-                  <PortalIframe tile={previewTile} scale={0.42} />
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(255,255,255,.12),rgba(0,0,0,.32)_62%,rgba(0,0,0,.7))]" />
-                </div>
-              ) : previewHasProject ? (
-                <div
-                  className="absolute inset-0 bg-cover bg-center"
-                  style={{ backgroundImage: `url(${previewTile.thumbnailUrl})` }}
-                />
-              ) : (
-                <div className="absolute inset-0" style={{ backgroundColor: previewTile.color }} />
-              )}
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/80 to-transparent p-5 sm:p-7">
-                <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#00a8ff]">Hover Preview</p>
-                <h2 className="mt-3 text-4xl font-black tracking-[-0.05em] text-white">#{previewTile.id} {previewTile.projectTitle}</h2>
-                <p className="mt-2 text-[#bdbdbd]">{previewTile.ownerName} · {previewTile.zoUsername}</p>
-                {previewHasProject ? (
-                  <a className="mt-4 inline-block break-all font-mono text-sm text-[#00a8ff] hover:text-white" href={previewTile.projectUrl} target="_blank" rel="noreferrer">
-                    {previewTile.projectUrl} ↗
-                  </a>
-                ) : (
-                  <a className="mt-4 inline-block break-all font-mono text-sm text-[#00a8ff] hover:text-white" href="https://{{HANDLE}}.zo.space/examples">
-                    https://{{HANDLE}}.zo.space/examples
-                  </a>
-                )}
-              </div>
-            </div>
+            <PreviewPanel
+              tile={previewTile}
+              hasProject={previewHasProject}
+              mounted={previewMounted}
+              isActive={hoveredId !== null}
+            />
             <div className="bg-[#222] p-5 font-mono text-sm leading-6 text-[#bdbdbd] sm:p-7">
               <div className="text-[#00a8ff]">rules</div>
               <p className="mt-3">
                 {viewMode === "globe"
-                  ? "Drag to orbit the collaboration globe. Auto-rotate keeps the artifact in motion. Switch to grid view to hover tiles, preview portals, and open Zo spaces."
+                  ? "Drag to orbit the collaboration globe. Hover a face to highlight it and preview the project below. Auto-rotate pauses while you hover. Switch to grid view for click-through to Zo spaces."
                   : `Hover a populated tile to preview its portal in the panel below. Click (or middle/⌘-click) to open the underlying Zo space in a new tab. Portals stay mounted for the ${MAX_MOUNTED_PORTALS} most recently visited tiles, so returning to a tile is instant. Use the query param to compare different tile counts quickly.`}
               </p>
               <div className="mt-4 font-mono text-xs uppercase tracking-[0.16em] text-white/45">
