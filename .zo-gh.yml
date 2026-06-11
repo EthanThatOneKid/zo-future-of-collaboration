@@ -1,0 +1,16 @@
+version: "1"
+branch: main
+fallbackBranches:
+  - master
+sync:
+  enabled: true
+  packPaths: future-of-collaboration.zopack.md
+  onEvents: push,workflow_dispatch
+events:
+  push: sync
+  workflow_dispatch: sync
+  pull_request: review
+  issues: triage
+  workflow_run: summarize
+agent:
+  priorStateKey: zo-gh:EthanThatOneKid/zo-future-of-collaboration

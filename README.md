@@ -12,6 +12,7 @@ Planning and design-doc repo for the Zo event experience: a standalone app where
 - `examples/thumbnails/` - generated WebP thumbnails and manifest for the deployed example spaces.
 - `examples-index.zopack.md` - public index route for the deployed example gallery at `https://etok.zo.space/examples`.
 - `future-of-collaboration.zopack.md` - current Zo Space prototype pack for `https://etok.zo.space/future-of-collaboration`.
+- `.zo-gh.yml` - sync manifest used by `zo-gh` to keep this repo and the live Zo space eventually consistent.
 
 ## Current Thesis
 
