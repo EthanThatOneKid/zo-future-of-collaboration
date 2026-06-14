@@ -27,6 +27,12 @@ For this repo, that means pushes to `main` that touch `future-of-collaboration.z
 can sync the live Zo Space automatically, while `workflow_dispatch` can force a
 manual refresh.
 
+Important: a push does **not** mean “deploy everything.” It only becomes a sync
+candidate when the watched branch and watched pack path match the policy above.
+Other commits are summarized, triaged, or ignored according to the event rules.
+If Zo is asleep or a delivery is missed, the hourly reconciliation pass is the
+backfill path that rechecks the same policy and catches drift later.
+
 ## Current Thesis
 
 The experience should feel less like a corporate logo mosaic and more like a living collaboration artifact. Each Zo user owns one tile in a shared gradient field. Idle and populated tiles stay monochrome according to their grid position; hovering reveals the person/project behind it. The final grid becomes an exportable event artifact.
