@@ -185,26 +185,52 @@ function TileDetailPanel({
   mounted,
   viewMode,
   cacheCount,
+  compact = false,
 }: {
   tile: Tile | null;
   hasProject: boolean;
   mounted: boolean;
   viewMode: ViewMode;
   cacheCount: number;
+  compact?: boolean;
 }) {
+  const panelPadding = compact ? "p-3 sm:p-5" : "p-5 sm:p-7";
+
   if (!tile) {
     return (
-      <div className="bg-[#222] p-5 font-mono text-sm leading-6 text-[#bdbdbd] sm:p-7">
+      <div className={`bg-[#222] font-mono text-sm leading-6 text-[#bdbdbd] ${panelPadding}`}>
         <div className="text-[#00a8ff]">rules</div>
-        <p className="mt-3">
-          {viewMode === "globe"
-            ? "Drag to orbit the collaboration globe. Click a face to select it — the cyan border and preview below stay pinned until you pick another tile. Auto-rotate pauses while a tile is selected. Open the project link in the preview panel, or switch to grid view for direct click-through."
-            : `Hover a populated tile to preview its portal in the panel below. Click (or middle/⌘-click) to open the underlying Zo space in a new tab. Portals stay mounted for the ${MAX_MOUNTED_PORTALS} most recently visited tiles, so returning to a tile is instant. Use the query param to compare different tile counts quickly.`}
+        <p className="mt-2 sm:mt-3">
+          {viewMode === "globe" ? (
+            compact ? (
+              <>
+                <span className="md:hidden">
+                  Drag to orbit. Click a face to select it — preview and details stay pinned below.
+                </span>
+                <span className="hidden md:inline">
+                  Drag to orbit the collaboration globe. Click a face to select it — the cyan border and preview below stay pinned until you pick another tile. Auto-rotate pauses while a tile is selected.
+                </span>
+              </>
+            ) : (
+              "Drag to orbit the collaboration globe. Click a face to select it — the cyan border and preview below stay pinned until you pick another tile. Auto-rotate pauses while a tile is selected. Open the project link in the preview panel, or switch to grid view for direct click-through."
+            )
+          ) : (
+            `Hover a populated tile to preview its portal in the panel below. Click (or middle/⌘-click) to open the underlying Zo space in a new tab. Portals stay mounted for the ${MAX_MOUNTED_PORTALS} most recently visited tiles, so returning to a tile is instant. Use the query param to compare different tile counts quickly.`
+          )}
         </p>
-        <div className="mt-4 font-mono text-xs uppercase tracking-[0.16em] text-white/45">
+        <div
+          className={`mt-3 font-mono text-xs uppercase tracking-[0.16em] text-white/45 sm:mt-4 ${compact ? "max-md:hidden" : ""}`}
+        >
           cache: {cacheCount} / {MAX_MOUNTED_PORTALS} mounted
         </div>
-        <a className="mt-6 inline-block rounded border border-[#00a8ff] px-3 py-2 text-[#00a8ff] hover:bg-[#00a8ff] hover:text-black" href="/examples">
+        <a
+          className={`mt-4 text-[#00a8ff] hover:text-white sm:mt-6 ${
+            compact
+              ? "inline-block max-md:text-xs max-md:underline max-md:underline-offset-2 md:rounded md:border md:border-[#00a8ff] md:px-3 md:py-2 md:no-underline md:hover:bg-[#00a8ff] md:hover:text-black"
+              : "inline-block rounded border border-[#00a8ff] px-3 py-2 hover:bg-[#00a8ff] hover:text-black"
+          }`}
+          href="/examples"
+        >
           Open live examples index
         </a>
       </div>
@@ -219,7 +245,7 @@ function TileDetailPanel({
   ];
 
   return (
-    <div className="bg-[#222] p-5 font-mono text-sm leading-6 text-[#bdbdbd] sm:p-7">
+    <div className={`bg-[#222] font-mono text-sm leading-6 text-[#bdbdbd] ${panelPadding}`}>
       <div className="flex items-baseline justify-between gap-3">
         <div className="text-[#00a8ff]">tile #{tile.id}</div>
         <div className="text-[10px] uppercase tracking-[0.22em] text-white/35">
@@ -287,20 +313,22 @@ function PreviewPanel({
   mounted,
   isActive,
   label,
+  compact = false,
 }: {
   tile: Tile;
   hasProject: boolean;
   mounted: boolean;
   isActive: boolean;
   label: string;
+  compact?: boolean;
 }) {
   return (
     <div
-      className={`relative flex min-h-[420px] flex-col overflow-hidden bg-black transition-shadow duration-200 ${
-        isActive ? "ring-2 ring-[#00a8ff] ring-inset" : ""
-      }`}
+      className={`relative flex flex-col overflow-hidden bg-black transition-shadow duration-200 ${
+        compact ? "min-h-[100px] md:min-h-[220px] lg:min-h-[240px]" : "min-h-[420px]"
+      } ${isActive ? "ring-2 ring-[#00a8ff] ring-inset" : ""}`}
     >
-      <div className="relative min-h-0 flex-1">
+      <div className={`relative min-h-0 flex-1 ${compact ? "min-h-[100px] md:min-h-0" : ""}`}>
         {hasProject && mounted ? (
           <div className="absolute inset-0 overflow-hidden">
             <PortalIframe tile={tile} scale={0.42} />
@@ -314,19 +342,25 @@ function PreviewPanel({
           <div className="absolute inset-0" style={{ backgroundColor: tile.color }} />
         )}
       </div>
-      <div className="shrink-0 border-t border-white/10 bg-[#111] px-4 py-3 sm:px-5">
+      <div
+        className={`shrink-0 border-t border-white/10 bg-[#111] ${compact ? "px-3 py-2 sm:px-5 sm:py-3" : "px-4 py-3 sm:px-5"}`}
+      >
         <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#00a8ff]">{label}</p>
-        <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-          <span className="text-lg font-black tracking-[-0.04em] text-white sm:text-xl">
+        <div
+          className={`mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 ${compact ? "max-md:mt-0.5" : "mt-1.5"}`}
+        >
+          <span
+            className={`font-black tracking-[-0.04em] text-white ${compact ? "text-sm sm:text-xl" : "text-lg sm:text-xl"}`}
+          >
             #{tile.id} {tile.projectTitle}
           </span>
-          <span className="text-sm text-[#bdbdbd]">
+          <span className={`text-[#bdbdbd] ${compact ? "hidden text-xs md:inline md:text-sm" : "text-sm"}`}>
             · {tile.ownerName} · {tile.zoUsername}
           </span>
         </div>
         {hasProject ? (
           <a
-            className="mt-1 inline-block max-w-full truncate font-mono text-xs text-[#00a8ff] hover:text-white sm:text-sm"
+            className={`mt-1 inline-block max-w-full truncate font-mono text-[#00a8ff] hover:text-white ${compact ? "hidden text-xs md:inline md:text-sm" : "text-xs sm:text-sm"}`}
             href={tile.projectUrl}
             target="_blank"
             rel="noreferrer"
@@ -335,7 +369,7 @@ function PreviewPanel({
           </a>
         ) : (
           <a
-            className="mt-1 inline-block max-w-full truncate font-mono text-xs text-[#00a8ff] hover:text-white sm:text-sm"
+            className={`mt-1 inline-block max-w-full truncate font-mono text-[#00a8ff] hover:text-white ${compact ? "hidden text-xs md:inline md:text-sm" : "text-xs sm:text-sm"}`}
             href="https://{{HANDLE}}.zo.space/examples"
           >
             https://{{HANDLE}}.zo.space/examples
@@ -788,7 +822,7 @@ function GlobeStage({
 
       scene = new THREE.Scene();
       camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
-      camera.position.set(0, 0, 32);
+      camera.position.set(0, 0, 48);
 
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio ?? 1, 2));
@@ -805,7 +839,7 @@ function GlobeStage({
       controls.enableDamping = true;
       controls.dampingFactor = 0.07;
       controls.minDistance = 20;
-      controls.maxDistance = 48;
+      controls.maxDistance = 58;
       controls.autoRotate = true;
       controls.autoRotateSpeed = 0.4;
       controls.target.set(0, 0, 0);
@@ -1008,17 +1042,28 @@ function GlobeStage({
   }, [tiles, debugMode]);
 
   return (
-    <div className="relative min-h-[720px] overflow-hidden bg-[radial-gradient(circle_at_50%_42%,rgba(46,120,210,.28),rgba(21,40,66,.75)_38%,rgba(8,8,10,1)_72%)]">
+    <div className="relative h-full min-h-0 overflow-hidden bg-[radial-gradient(circle_at_50%_42%,rgba(46,120,210,.28),rgba(21,40,66,.75)_38%,rgba(8,8,10,1)_72%)]">
       <div ref={containerRef} className="absolute inset-0" />
-      <div className="pointer-events-none absolute left-4 top-4 rounded border border-white/10 bg-black/35 px-3 py-2 font-mono text-xs uppercase tracking-[0.2em] text-white/65 backdrop-blur-sm">
-        globe mode · orbit + click
+      <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10 sm:inset-x-4 sm:bottom-4">
+        {debugMode ? (
+          <div className="mb-2 h-6 w-6 rounded border-2 border-white bg-red-500/90" />
+        ) : null}
+        <div className="flex overflow-hidden rounded border border-white/10 bg-black/35 font-mono text-[10px] uppercase leading-snug tracking-[0.12em] text-white/65 backdrop-blur-sm sm:text-xs sm:tracking-[0.2em]">
+          <div className="min-w-0 flex-1 px-2.5 py-1.5 sm:px-3 sm:py-2">
+            <span className="sm:hidden">globe · orbit + click</span>
+            <span className="hidden sm:inline">globe mode · orbit + click</span>
+          </div>
+          <div className="w-px shrink-0 self-stretch bg-white/10" aria-hidden="true" />
+          <div className="min-w-0 flex-1 px-2.5 py-1.5 text-right sm:px-3 sm:py-2">
+            <span className="sm:hidden">
+              {exampleCount} ex · {faceCount} faces
+            </span>
+            <span className="hidden sm:inline">
+              {exampleCount} examples · {faceCount} faces
+            </span>
+          </div>
+        </div>
       </div>
-      <div className="pointer-events-none absolute right-4 top-4 rounded border border-white/10 bg-black/35 px-3 py-2 font-mono text-xs uppercase tracking-[0.2em] text-white/65 backdrop-blur-sm">
-        {exampleCount} examples · {faceCount} faces
-      </div>
-      {debugMode ? (
-        <div className="pointer-events-none absolute left-4 top-14 h-7 w-7 rounded border-2 border-white bg-red-500/90" />
-      ) : null}
     </div>
   );
 }
@@ -1069,6 +1114,20 @@ function FutureOfCollaborationContent() {
     setSelectedId(null);
   }, [viewMode]);
 
+  useEffect(() => {
+    if (typeof document === "undefined" || viewMode !== "globe") return;
+    const { body } = document;
+    const html = document.documentElement;
+    const prevBodyBg = body.style.backgroundColor;
+    const prevHtmlBg = html.style.backgroundColor;
+    body.style.backgroundColor = "#202020";
+    html.style.backgroundColor = "#202020";
+    return () => {
+      body.style.backgroundColor = prevBodyBg;
+      html.style.backgroundColor = prevHtmlBg;
+    };
+  }, [viewMode]);
+
   const mountPreview = (id: number) => {
     setLruIds((prev) => {
       const without = prev.filter((entryId) => entryId !== id);
@@ -1108,8 +1167,16 @@ function FutureOfCollaborationContent() {
         : "Featured";
 
   return (
-    <main className="min-h-screen bg-[#202020] text-[#d7d7d7]">
-      <div className="grid min-h-screen lg:grid-cols-[300px_1fr]">
+    <main
+      className={`bg-[#202020] text-[#d7d7d7] ${viewMode === "globe" ? "h-dvh overflow-hidden" : "min-h-screen"}`}
+    >
+      <div
+        className={`grid ${
+          viewMode === "globe"
+            ? "h-full max-h-dvh grid-rows-[auto_1fr] overflow-hidden lg:grid-cols-[300px_1fr] lg:grid-rows-none"
+            : "min-h-screen lg:h-screen lg:max-h-screen"
+        } lg:grid-cols-[300px_1fr]`}
+      >
         <aside className="border-b border-white/15 bg-[#222] lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r">
           <div className="flex items-center justify-between border-b border-white/15 px-4 py-5 lg:block">
             <div>
@@ -1145,14 +1212,28 @@ function FutureOfCollaborationContent() {
           </nav>
         </aside>
 
-        <section className="min-w-0">
-          <header className="sticky top-0 z-20 border-b border-black/30 bg-[#202020]/90 px-4 py-3 backdrop-blur sm:px-5">
+        <section
+          className={`min-w-0 bg-[#202020] ${
+            viewMode === "globe"
+              ? "grid min-h-0 grid-rows-[auto_minmax(48dvh,1fr)_auto] overflow-hidden lg:h-full"
+              : ""
+          }`}
+        >
+          <header
+            className={`sticky top-0 z-20 shrink-0 border-b border-black/30 bg-[#202020]/90 px-4 backdrop-blur sm:px-5 ${
+              viewMode === "globe" ? "py-2 lg:py-3" : "py-3"
+            }`}
+          >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h1 className="max-w-3xl leading-none">
                 <span className="block font-mono text-[11px] uppercase tracking-[0.42em] text-[#2ca7ff] drop-shadow-[0_0_10px_rgba(42,167,255,0.65)] sm:text-[12px]">
                   Future of Collaboration
                 </span>
-                <span className="mt-3 block font-mono text-3xl font-normal uppercase tracking-[0.22em] text-[#2ca7ff] drop-shadow-[0_0_12px_rgba(42,167,255,0.8)] sm:text-5xl">
+                <span
+                  className={`mt-3 block font-mono text-3xl font-normal uppercase tracking-[0.22em] text-[#2ca7ff] drop-shadow-[0_0_12px_rgba(42,167,255,0.8)] sm:text-5xl ${
+                    viewMode === "globe" ? "hidden lg:block" : ""
+                  }`}
+                >
                   Future of Collaboration
                 </span>
               </h1>
@@ -1228,13 +1309,18 @@ function FutureOfCollaborationContent() {
             />
           )}
 
-          <footer className="grid gap-px bg-[#151515] md:grid-cols-[1fr_1fr]">
+          <footer
+            className={`grid shrink-0 divide-y divide-white/10 md:grid-cols-[1fr_1fr] md:divide-x md:divide-y-0 ${
+              viewMode === "globe" ? "max-md:max-h-[34dvh] max-md:overflow-y-auto md:max-h-none md:overflow-visible" : ""
+            }`}
+          >
             <PreviewPanel
               tile={previewTile}
               hasProject={previewHasProject}
               mounted={previewMounted}
               isActive={activePreviewId !== null}
               label={previewLabel}
+              compact={viewMode === "globe"}
             />
             <TileDetailPanel
               tile={activeTile}
@@ -1242,6 +1328,7 @@ function FutureOfCollaborationContent() {
               mounted={activeTile !== null && isMounted(activeTile.id)}
               viewMode={viewMode}
               cacheCount={lruIds.length}
+              compact={viewMode === "globe"}
             />
           </footer>
         </section>
