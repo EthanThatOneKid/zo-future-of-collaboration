@@ -11,6 +11,7 @@ exported: 2026-06-03
 # future-of-collaboration
 
 100-tile collaboration wall powered by the live Zo examples index.
+<!-- webhook probe -->
 
 ## Routes
 
