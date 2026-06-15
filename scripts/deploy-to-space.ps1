@@ -4,11 +4,9 @@
 # Usage:
 #   $env:ZO_API_KEY = "zo_sk_..."
 #   .\scripts\deploy-to-space.ps1
-#   .\scripts\deploy-to-space.ps1 -UpgradeWebhook   # also refresh /api/github-webhook from zo-gh policy branch
 #   .\scripts\deploy-to-space.ps1 -VerifyOnly       # check live bundle markers only
 
 param(
-    [switch]$UpgradeWebhook,
     [switch]$VerifyOnly,
     [string]$Handle = "etok"
 )
@@ -73,22 +71,6 @@ The pack on main uses the pre-compact shell (300px sidebar, dual-line header, 48
 Write-Host "Dispatching Zo agent to deploy /future-of-collaboration..." -ForegroundColor Cyan
 $deploy = Invoke-ZoAsk $syncPrompt
 Write-Host ($deploy | ConvertTo-Json -Depth 6)
-
-if ($UpgradeWebhook) {
-    $whPrompt = @"
-Upgrade the GitHub webhook on $Handle.zo.space to the policy-driven zo-gh handler.
-
-1. In code/github.com/EthanThatOneKid/zo-gh, fetch and checkout branch feat/policy-driven-events (or read webhook-agent/api-github-webhook.ts from that branch on GitHub).
-2. write_space_route path=/api/github-webhook route_type=api with the full contents of webhook-agent/api-github-webhook.ts from that branch.
-3. Confirm GITHUB_WEBHOOK_SECRET and ZO_API_KEY remain configured in Zo Secrets.
-4. get_space_errors() for /api/github-webhook.
-
-This handler reads .zo-gh.yml from pushed repos and dispatches sync agents when .zopack.md files change on main.
-"@
-    Write-Host "Dispatching Zo agent to upgrade /api/github-webhook..." -ForegroundColor Cyan
-    $wh = Invoke-ZoAsk $whPrompt
-    Write-Host ($wh | ConvertTo-Json -Depth 6)
-}
 
 Write-Host "Waiting 15s for space rebuild..." -ForegroundColor DarkGray
 Start-Sleep -Seconds 15
