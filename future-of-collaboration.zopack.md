@@ -5,7 +5,7 @@ name: future-of-collaboration
 description: "100-tile collaboration wall powered by the live Zo examples index."
 author: etok.zo.computer
 routes: 1
-exported: 2026-06-03
+exported: 2026-06-15
 ---
 
 # future-of-collaboration
