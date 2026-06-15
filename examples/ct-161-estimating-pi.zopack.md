@@ -3,7 +3,7 @@ format: zopack
 version: "1.0"
 name: ct-161-estimating-pi
 description: "Estimate pi via coprime random pairs (Coding Train #161)"
-author: "{{HANDLE}}.zo.computer"
+author: "etok.zo.computer"
 routes: 1
 exported: 2026-05-27
 ---

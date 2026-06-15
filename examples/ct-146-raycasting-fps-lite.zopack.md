@@ -3,7 +3,7 @@ format: zopack
 version: "1.0"
 name: ct-146-raycasting-fps-lite
 description: "First-person raycasting lite (Coding Train #146)"
-author: "{{HANDLE}}.zo.computer"
+author: "etok.zo.computer"
 routes: 1
 exported: 2026-05-27
 ---

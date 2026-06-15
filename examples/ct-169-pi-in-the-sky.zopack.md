@@ -3,7 +3,7 @@ format: zopack
 version: "1.0"
 name: ct-169-pi-in-the-sky
 description: "Catch falling pi digits (Coding Train #169)"
-author: "{{HANDLE}}.zo.computer"
+author: "etok.zo.computer"
 routes: 1
 exported: 2026-05-27
 ---

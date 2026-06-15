@@ -3,7 +3,7 @@ format: zopack
 version: "1.0"
 name: ct-c5-marching-squares
 description: "Marching squares contour noise (Coding in the Cabana C5)"
-author: "{{HANDLE}}.zo.computer"
+author: "etok.zo.computer"
 routes: 1
 exported: 2026-05-27
 ---

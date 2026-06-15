@@ -3,7 +3,7 @@ format: zopack
 version: "1.0"
 name: ct-c4-worley-noise
 description: "Worley noise F1-F2 cellular texture (Coding in the Cabana C4)"
-author: "{{HANDLE}}.zo.computer"
+author: "etok.zo.computer"
 routes: 1
 exported: 2026-05-27
 ---

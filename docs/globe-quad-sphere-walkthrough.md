@@ -72,7 +72,7 @@ Thumbnails are static WebPs under `/examples/thumbnails/<slug>.webp`, generated 
 
 ```powershell
 cd zo-future-of-collaboration
-zopack serve --file future-of-collaboration.zopack.md --port 3000 --handle etok
+zopack serve --file future-of-collaboration.zopack.md --port 3000
 ```
 
 Open:
@@ -82,8 +82,6 @@ Open:
 Optional debug controls:
 
 `http://localhost:3000/future-of-collaboration?view=globe&debug=1`
-
-(`--handle` replaces `{{HANDLE}}` in example URLs. Without it, preview links show the literal placeholder.)
 
 ## Verification (2026-06-05)
 
@@ -107,5 +105,4 @@ Screenshot: [globe-quad-sphere-screenshot.png](./globe-quad-sphere-screenshot.pn
 
 - **Globe is capped at 30 examples** until more packs and thumbnails exist in `examples/` (regenerate via [`thumbnail-workflow.md`](./thumbnail-workflow.md))
 - **Click-to-select preview** — click a face to pin its border highlight and footer preview; open projects via the preview panel link or use grid view for direct click-through
-- **Local serve without `--handle`** leaves `{{HANDLE}}` in example URLs
 - **2 wrap-filled faces** at 30 examples duplicate two thumbnails structurally (badge still reports example count separately)

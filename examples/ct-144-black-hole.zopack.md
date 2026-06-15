@@ -3,7 +3,7 @@ format: zopack
 version: "1.0"
 name: ct-144-black-hole
 description: "Black hole gravitational lensing (Coding Train #144)"
-author: "{{HANDLE}}.zo.computer"
+author: "etok.zo.computer"
 routes: 1
 exported: 2026-05-27
 ---

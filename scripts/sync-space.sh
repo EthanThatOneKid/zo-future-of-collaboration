@@ -21,9 +21,9 @@ cd "$REPO_DIR"
 # Keep git's chatter on stderr so stdout contains only the route code (or path).
 git pull --ff-only >&2
 
-# Extract the single route block between the `### \`/future-of-collaboration\`` header
-# and the `## Variables` section, stripping the surrounding ```tsx fence markers.
-awk '/^### `\/future-of-collaboration`/,/^## Variables/' "$PACK" \
+# Extract the single route block from the `### \`/future-of-collaboration\`` header
+# through EOF, stripping the surrounding ```tsx fence markers.
+awk '/^### `\/future-of-collaboration`/,0' "$PACK" \
   | sed '1d;$d' \
   | sed '1d;$d' \
   | sed -e '1{/^```tsx$/d}' -e '${/^```$/d}' \
