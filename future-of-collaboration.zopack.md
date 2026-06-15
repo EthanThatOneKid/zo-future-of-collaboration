@@ -1172,27 +1172,25 @@ function FutureOfCollaborationContent() {
       className={`bg-[#202020] text-[#d7d7d7] ${viewMode === "globe" ? "h-dvh overflow-hidden" : "min-h-screen"}`}
     >
       <div
-        className={`grid lg:grid-cols-[200px_1fr] ${
+        className={`grid ${
           viewMode === "globe"
-            ? "h-full max-h-dvh grid-rows-[auto_1fr] overflow-hidden lg:grid-rows-none"
+            ? "h-full max-h-dvh grid-rows-[auto_1fr] overflow-hidden lg:grid-cols-[300px_1fr] lg:grid-rows-none"
             : "min-h-screen lg:h-screen lg:max-h-screen"
-        }`}
+        } lg:grid-cols-[300px_1fr]`}
       >
         <aside className="border-b border-white/15 bg-[#222] lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r">
-          <div className="flex items-center justify-between gap-2 border-b border-white/15 px-3 py-3">
-            <div className="flex min-w-0 items-center gap-2">
-              <div className="font-mono text-xl font-black tracking-[0.08em] text-[#00a8ff]">zo.collab</div>
-              <div className="rounded-md border border-[#00a8ff] px-1.5 py-0.5 font-mono text-xs font-bold text-[#00a8ff]">
-                r100
-              </div>
+          <div className="flex items-center justify-between border-b border-white/15 px-4 py-5 lg:block">
+            <div>
+              <div className="font-mono text-3xl font-black tracking-[0.08em] text-[#00a8ff]">zo.collab</div>
+              <div className="mt-1 inline-block rounded-md border border-[#00a8ff] px-2 py-0.5 font-mono text-sm font-bold text-[#00a8ff]">r100</div>
             </div>
-            <div className="shrink-0 font-mono text-[10px] uppercase tracking-[0.18em] text-white/45">prototype</div>
+            <div className="font-mono text-xs uppercase tracking-[0.2em] text-white/45 lg:mt-5">prototype</div>
           </div>
 
-          <nav className="hidden h-[calc(100vh-72px)] overflow-y-auto px-3 py-3 font-mono text-sm leading-6 lg:block">
+          <nav className="hidden h-[calc(100vh-105px)] overflow-y-auto px-4 py-6 font-mono text-[19px] leading-8 lg:block">
             {navGroups.map((group) => (
-              <div key={group.label} className="mb-5">
-                <div className="mb-1.5 font-bold text-[#00a8ff]">{group.label}</div>
+              <div key={group.label} className="mb-10">
+                <div className="mb-2 font-bold text-[#00a8ff]">{group.label}</div>
                 {group.items.map((item) => (
                   <a
                     key={item}
@@ -1218,18 +1216,29 @@ function FutureOfCollaborationContent() {
         <section
           className={`min-w-0 bg-[#202020] ${
             viewMode === "globe"
-              ? "grid min-h-0 grid-rows-[auto_minmax(52dvh,1fr)_auto] overflow-hidden lg:h-full"
+              ? "grid min-h-0 grid-rows-[auto_minmax(48dvh,1fr)_auto] overflow-hidden lg:h-full"
               : ""
           }`}
         >
-          <header className="sticky top-0 z-20 shrink-0 border-b border-black/30 bg-[#202020]/90 px-4 py-2 backdrop-blur sm:px-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h1 className="min-w-0 leading-none">
-                <span className="block truncate font-mono text-[11px] uppercase tracking-[0.32em] text-[#2ca7ff] drop-shadow-[0_0_10px_rgba(42,167,255,0.65)] sm:text-[12px]">
+          <header
+            className={`sticky top-0 z-20 shrink-0 border-b border-black/30 bg-[#202020]/90 px-4 backdrop-blur sm:px-5 ${
+              viewMode === "globe" ? "py-2 lg:py-3" : "py-3"
+            }`}
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h1 className="max-w-3xl leading-none">
+                <span className="block font-mono text-[11px] uppercase tracking-[0.42em] text-[#2ca7ff] drop-shadow-[0_0_10px_rgba(42,167,255,0.65)] sm:text-[12px]">
+                  Future of Collaboration
+                </span>
+                <span
+                  className={`mt-3 block font-mono text-3xl font-normal uppercase tracking-[0.22em] text-[#2ca7ff] drop-shadow-[0_0_12px_rgba(42,167,255,0.8)] sm:text-5xl ${
+                    viewMode === "globe" ? "hidden lg:block" : ""
+                  }`}
+                >
                   Future of Collaboration
                 </span>
               </h1>
-              <div className="flex shrink-0 items-center gap-2 rounded border border-white/10 bg-[#252525] p-1 font-mono text-xs uppercase tracking-[0.16em] text-white/60">
+              <div className="flex items-center gap-2 rounded border border-white/10 bg-[#252525] p-1 font-mono text-xs uppercase tracking-[0.16em] text-white/60">
                 <button
                   type="button"
                   onClick={() => setViewMode("grid")}
