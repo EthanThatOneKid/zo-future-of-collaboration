@@ -2,7 +2,7 @@
 format: zopack
 version: "1.0"
 name: future-of-collaboration
-description: "100-tile collaboration wall powered by the live Zo examples index."
+description: "100-tile collaboration wall powered by the live Zo examples index (lavender accent)."
 author: etok.zo.computer
 routes: 1
 exported: 2026-06-15
