@@ -199,7 +199,7 @@ function TileDetailPanel({
   if (!tile) {
     return (
       <div className={`bg-[#222] font-mono text-sm leading-6 text-[#bdbdbd] ${panelPadding}`}>
-        <div className="text-[#00e676]">rules</div>
+        <div className="text-[#b388ff]">rules</div>
         <p className="mt-2 sm:mt-3">
           {viewMode === "globe" ? (
             compact ? (
@@ -224,10 +224,10 @@ function TileDetailPanel({
           cache: {cacheCount} / {MAX_MOUNTED_PORTALS} mounted
         </div>
         <a
-          className={`mt-4 text-[#00e676] hover:text-white sm:mt-6 ${
+          className={`mt-4 text-[#b388ff] hover:text-white sm:mt-6 ${
             compact
-              ? "inline-block max-md:text-xs max-md:underline max-md:underline-offset-2 md:rounded md:border md:border-[#00e676] md:px-3 md:py-2 md:no-underline md:hover:bg-[#00e676] md:hover:text-black"
-              : "inline-block rounded border border-[#00e676] px-3 py-2 hover:bg-[#00e676] hover:text-black"
+              ? "inline-block max-md:text-xs max-md:underline max-md:underline-offset-2 md:rounded md:border md:border-[#b388ff] md:px-3 md:py-2 md:no-underline md:hover:bg-[#b388ff] md:hover:text-black"
+              : "inline-block rounded border border-[#b388ff] px-3 py-2 hover:bg-[#b388ff] hover:text-black"
           }`}
           href="/examples"
         >
@@ -247,7 +247,7 @@ function TileDetailPanel({
   return (
     <div className={`bg-[#222] font-mono text-sm leading-6 text-[#bdbdbd] ${panelPadding}`}>
       <div className="flex items-baseline justify-between gap-3">
-        <div className="text-[#00e676]">tile #{tile.id}</div>
+        <div className="text-[#b388ff]">tile #{tile.id}</div>
         <div className="text-[10px] uppercase tracking-[0.22em] text-white/35">
           {viewMode === "globe" ? "selected" : "hovering"}
         </div>
@@ -265,7 +265,7 @@ function TileDetailPanel({
 
       {hasProject ? (
         <a
-          className="mt-4 block truncate text-[#00e676] hover:text-white"
+          className="mt-4 block truncate text-[#b388ff] hover:text-white"
           href={tile.projectUrl}
           target="_blank"
           rel="noreferrer"
@@ -288,7 +288,7 @@ function TileDetailPanel({
       <div className="mt-6 flex flex-wrap items-center gap-3">
         {hasProject ? (
           <a
-            className="inline-block rounded border border-[#00e676] px-3 py-2 text-[#00e676] hover:bg-[#00e676] hover:text-black"
+            className="inline-block rounded border border-[#b388ff] px-3 py-2 text-[#b388ff] hover:bg-[#b388ff] hover:text-black"
             href={tile.projectUrl}
             target="_blank"
             rel="noreferrer"
@@ -326,7 +326,7 @@ function PreviewPanel({
     <div
       className={`relative flex flex-col overflow-hidden bg-black transition-shadow duration-200 ${
         compact ? "min-h-[100px] md:min-h-[220px] lg:min-h-[240px]" : "min-h-[420px]"
-      } ${isActive ? "ring-2 ring-[#00e676] ring-inset" : ""}`}
+      } ${isActive ? "ring-2 ring-[#b388ff] ring-inset" : ""}`}
     >
       <div className={`relative min-h-0 flex-1 ${compact ? "min-h-[100px] md:min-h-0" : ""}`}>
         {hasProject && mounted ? (
@@ -345,7 +345,7 @@ function PreviewPanel({
       <div
         className={`shrink-0 border-t border-white/10 bg-[#111] ${compact ? "px-3 py-2 sm:px-5 sm:py-3" : "px-4 py-3 sm:px-5"}`}
       >
-        <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#00e676]">{label}</p>
+        <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#b388ff]">{label}</p>
         <div
           className={`mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 ${compact ? "max-md:mt-0.5" : "mt-1.5"}`}
         >
@@ -360,7 +360,7 @@ function PreviewPanel({
         </div>
         {hasProject ? (
           <a
-            className={`mt-1 inline-block max-w-full truncate font-mono text-[#00e676] hover:text-white ${compact ? "hidden text-xs md:inline md:text-sm" : "text-xs sm:text-sm"}`}
+            className={`mt-1 inline-block max-w-full truncate font-mono text-[#b388ff] hover:text-white ${compact ? "hidden text-xs md:inline md:text-sm" : "text-xs sm:text-sm"}`}
             href={tile.projectUrl}
             target="_blank"
             rel="noreferrer"
@@ -369,7 +369,7 @@ function PreviewPanel({
           </a>
         ) : (
           <a
-            className={`mt-1 inline-block max-w-full truncate font-mono text-[#00e676] hover:text-white ${compact ? "hidden text-xs md:inline md:text-sm" : "text-xs sm:text-sm"}`}
+            className={`mt-1 inline-block max-w-full truncate font-mono text-[#b388ff] hover:text-white ${compact ? "hidden text-xs md:inline md:text-sm" : "text-xs sm:text-sm"}`}
             href="https://etok.zo.space/examples"
           >
             https://etok.zo.space/examples
@@ -584,7 +584,7 @@ function TileCard({
   onHover: (tile: Tile | null) => void;
 }) {
   const hasProject = tile.status !== "empty";
-  const className = `group isolate relative h-[156px] overflow-hidden bg-neutral-900 text-left outline-none transition duration-200 hover:z-10 hover:scale-[1.025] focus-visible:z-10 focus-visible:scale-[1.025] focus-visible:ring-2 focus-visible:ring-[#00e676] sm:h-[180px]`;
+  const className = `group isolate relative h-[156px] overflow-hidden bg-neutral-900 text-left outline-none transition duration-200 hover:z-10 hover:scale-[1.025] focus-visible:z-10 focus-visible:scale-[1.025] focus-visible:ring-2 focus-visible:ring-[#b388ff] sm:h-[180px]`;
   const Inner = (
     <>
       {hasProject ? (
@@ -1180,8 +1180,8 @@ function FutureOfCollaborationContent() {
         <aside className="border-b border-white/15 bg-[#222] lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r">
           <div className="flex items-center justify-between border-b border-white/15 px-4 py-5 lg:block">
             <div>
-              <div className="font-mono text-3xl font-black tracking-[0.08em] text-[#00e676]">zo.collab</div>
-              <div className="mt-1 inline-block rounded-md border border-[#00e676] px-2 py-0.5 font-mono text-sm font-bold text-[#00e676]">r100</div>
+              <div className="font-mono text-3xl font-black tracking-[0.08em] text-[#b388ff]">zo.collab</div>
+              <div className="mt-1 inline-block rounded-md border border-[#b388ff] px-2 py-0.5 font-mono text-sm font-bold text-[#b388ff]">r100</div>
             </div>
             <div className="font-mono text-xs uppercase tracking-[0.2em] text-white/45 lg:mt-5">prototype</div>
           </div>
@@ -1189,7 +1189,7 @@ function FutureOfCollaborationContent() {
           <nav className="hidden h-[calc(100vh-105px)] overflow-y-auto px-4 py-6 font-mono text-[19px] leading-8 lg:block">
             {navGroups.map((group) => (
               <div key={group.label} className="mb-10">
-                <div className="mb-2 font-bold text-[#00e676]">{group.label}</div>
+                <div className="mb-2 font-bold text-[#b388ff]">{group.label}</div>
                 {group.items.map((item) => (
                   <a
                     key={item}
@@ -1226,11 +1226,11 @@ function FutureOfCollaborationContent() {
           >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h1 className="max-w-3xl leading-none">
-                <span className="block font-mono text-[11px] uppercase tracking-[0.42em] text-[#2ce67f] drop-shadow-[0_0_10px_rgba(44,230,127,0.65)] sm:text-[12px]">
+                <span className="block font-mono text-[11px] uppercase tracking-[0.42em] text-[#d4a5ff] drop-shadow-[0_0_10px_rgba(179,136,255,0.65)] sm:text-[12px]">
                   Future of Collaboration
                 </span>
                 <span
-                  className={`mt-3 block font-mono text-3xl font-normal uppercase tracking-[0.22em] text-[#2ce67f] drop-shadow-[0_0_12px_rgba(44,230,127,0.8)] sm:text-5xl ${
+                  className={`mt-3 block font-mono text-3xl font-normal uppercase tracking-[0.22em] text-[#d4a5ff] drop-shadow-[0_0_12px_rgba(179,136,255,0.8)] sm:text-5xl ${
                     viewMode === "globe" ? "hidden lg:block" : ""
                   }`}
                 >
@@ -1241,14 +1241,14 @@ function FutureOfCollaborationContent() {
                 <button
                   type="button"
                   onClick={() => setViewMode("grid")}
-                  className={`rounded px-3 py-2 transition ${viewMode === "grid" ? "bg-[#00e676] text-black" : "hover:bg-white/10 hover:text-white"}`}
+                  className={`rounded px-3 py-2 transition ${viewMode === "grid" ? "bg-[#b388ff] text-black" : "hover:bg-white/10 hover:text-white"}`}
                 >
                   grid
                 </button>
                 <button
                   type="button"
                   onClick={() => setViewMode("globe")}
-                  className={`rounded px-3 py-2 transition ${viewMode === "globe" ? "bg-[#00e676] text-black" : "hover:bg-white/10 hover:text-white"}`}
+                  className={`rounded px-3 py-2 transition ${viewMode === "globe" ? "bg-[#b388ff] text-black" : "hover:bg-white/10 hover:text-white"}`}
                 >
                   globe
                 </button>
@@ -1263,7 +1263,7 @@ function FutureOfCollaborationContent() {
                       max={MAX_GRID_SIZE}
                       value={gridSize}
                       onChange={(event) => setGridSize(clampGridSize(Number(event.target.value)))}
-                      className="h-2 w-full cursor-pointer accent-[#00e676]"
+                      className="h-2 w-full cursor-pointer accent-[#b388ff]"
                     />
                   </label>
                   <label className="grid gap-1">
@@ -1272,7 +1272,7 @@ function FutureOfCollaborationContent() {
                       type="checkbox"
                       checked={debugMode}
                       onChange={(event) => setDebugMode(event.target.checked)}
-                      className="h-4 w-4 accent-[#00e676]"
+                      className="h-4 w-4 accent-[#b388ff]"
                     />
                   </label>
                   <div className="text-[10px] tracking-[0.22em] text-white/40">
