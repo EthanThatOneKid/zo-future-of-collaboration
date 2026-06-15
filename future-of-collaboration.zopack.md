@@ -156,9 +156,9 @@ function buildTiles(gridSize: number): Tile[] {
       projectTitle: project ? project[1] : "Available tile",
       projectUrl: project
         ? (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
-          ? `https://etok.zo.space/examples/${project[0]}`
+          ? `https://{{HANDLE}}.zo.space/examples/${project[0]}`
           : `/examples/${project[0]}`)
-        : "https://etok.zo.space/examples",
+        : "https://{{HANDLE}}.zo.space/examples",
       thumbnailUrl: project ? thumbnailFor(project[0]) : null,
       status: project ? "live" : "empty",
       scene: index % 12,
@@ -370,9 +370,9 @@ function PreviewPanel({
         ) : (
           <a
             className={`mt-1 inline-block max-w-full truncate font-mono text-[#00a8ff] hover:text-white ${compact ? "hidden text-xs md:inline md:text-sm" : "text-xs sm:text-sm"}`}
-            href="https://etok.zo.space/examples"
+            href="https://{{HANDLE}}.zo.space/examples"
           >
-            https://etok.zo.space/examples
+            https://{{HANDLE}}.zo.space/examples
           </a>
         )}
       </div>
@@ -1337,3 +1337,9 @@ function FutureOfCollaborationContent() {
   );
 }
 ```
+
+## Variables
+
+| Placeholder | Description |
+|---|---|
+| `{{HANDLE}}` | Your zo.space handle (replaces `etok`) |
