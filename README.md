@@ -24,9 +24,9 @@ The public `/examples` index route is deployed on Zo Space but is **not** checke
 
 | Script | Purpose |
 |--------|---------|
-| [`scripts/deploy-to-space.ps1`](scripts/deploy-to-space.ps1) | Deploy `future-of-collaboration.zopack.md` to `etok.zo.space` via the Zo API (`ZO_API_KEY`). Supports `-VerifyOnly` to check live bundle markers. |
-| [`scripts/sync-space.ps1`](scripts/sync-space.ps1) / [`scripts/sync-space.sh`](scripts/sync-space.sh) | Pull latest `main`, extract the `/future-of-collaboration` route TSX from the pack for manual paste or CLI import. |
 | [`scripts/capture-example-thumbnails.mjs`](scripts/capture-example-thumbnails.mjs) | Regenerate `examples/thumbnails/*.webp` and `manifest.json` after visual changes or new packs. See [`docs/thumbnail-workflow.md`](docs/thumbnail-workflow.md). |
+
+Deploying the live wall is handled by [`zo-gh`](https://github.com/EthanThatOneKid/zo-gh) via [`.zo-gh.yml`](.zo-gh.yml): push to `main` (when `future-of-collaboration.zopack.md` changes) or `workflow_dispatch` on GitHub triggers Zo to sync the route on `etok.zo.space`.
 
 ## `.zo-gh.yml`
 
