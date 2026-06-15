@@ -10,7 +10,7 @@ exported: 2026-06-15
 
 # future-of-collaboration
 
-<!-- sync probe: keep webhook deployment exercised -->
+<!-- sync probe 2: keep webhook deployment exercised -->
 
 100-tile collaboration wall powered by the live Zo examples index.
 
