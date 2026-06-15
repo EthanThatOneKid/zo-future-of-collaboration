@@ -3,7 +3,7 @@ format: zopack
 version: "1.0"
 name: ct-185-dragon-curve
 description: "Animated dragon curve fractal unfold (Coding Train #185)"
-author: "{{HANDLE}}.zo.computer"
+author: "etok.zo.computer"
 routes: 1
 exported: 2026-05-27
 ---

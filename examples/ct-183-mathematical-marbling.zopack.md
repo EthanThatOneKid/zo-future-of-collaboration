@@ -3,7 +3,7 @@ format: zopack
 version: "1.0"
 name: ct-183-mathematical-marbling
 description: "Mathematical paper marbling — ink drops and swirl (Coding Train #183)"
-author: "{{HANDLE}}.zo.computer"
+author: "etok.zo.computer"
 routes: 1
 exported: 2026-05-27
 ---

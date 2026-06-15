@@ -3,7 +3,7 @@ format: zopack
 version: "1.0"
 name: ct-179-wolfram-ca
 description: "Elementary cellular automaton — Wolfram rules (Coding Train #179)"
-author: "{{HANDLE}}.zo.computer"
+author: "etok.zo.computer"
 routes: 1
 exported: 2026-05-27
 ---

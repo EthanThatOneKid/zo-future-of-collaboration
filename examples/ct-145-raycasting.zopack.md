@@ -3,7 +3,7 @@ format: zopack
 version: "1.0"
 name: ct-145-raycasting
 description: "2D ray casting with wall shadows and FOV (Coding Train #145)"
-author: "{{HANDLE}}.zo.computer"
+author: "etok.zo.computer"
 routes: 1
 exported: 2026-05-27
 ---

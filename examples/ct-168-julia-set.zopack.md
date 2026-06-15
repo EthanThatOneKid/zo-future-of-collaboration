@@ -3,7 +3,7 @@ format: zopack
 version: "1.0"
 name: ct-168-julia-set
 description: "Julia set pan and zoom — 2D fractal (Coding Train #168)"
-author: "{{HANDLE}}.zo.computer"
+author: "etok.zo.computer"
 routes: 1
 exported: 2026-05-27
 ---

@@ -3,7 +3,7 @@ format: zopack
 version: "1.0"
 name: ct-184-elastic-collisions
 description: "Elastic circle collisions (Coding Train #184)"
-author: "{{HANDLE}}.zo.computer"
+author: "etok.zo.computer"
 routes: 1
 exported: 2026-05-27
 ---

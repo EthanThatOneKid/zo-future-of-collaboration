@@ -76,7 +76,7 @@ The script default is `http://localhost:3099/examples`. That only works if you h
 To preview thumbnails after generation, serve the main pack (thumbnails are static assets beside the examples):
 
 ```powershell
-zopack serve --file future-of-collaboration.zopack.md --port 3000 --handle etok
+zopack serve --file future-of-collaboration.zopack.md --port 3000
 ```
 
 Open `http://localhost:3000/future-of-collaboration?view=globe`.

@@ -3,7 +3,7 @@ format: zopack
 version: "1.0"
 name: ct-176-buffons-needle
 description: "Buffon's needle pi estimation (Coding Train #176)"
-author: "{{HANDLE}}.zo.computer"
+author: "etok.zo.computer"
 routes: 1
 exported: 2026-05-27
 ---

@@ -3,7 +3,7 @@ format: zopack
 version: "1.0"
 name: ct-180-falling-sand
 description: "Falling sand pixel physics — sand, water, stone (Coding Train #180)"
-author: "{{HANDLE}}.zo.computer"
+author: "etok.zo.computer"
 routes: 1
 exported: 2026-05-27
 ---

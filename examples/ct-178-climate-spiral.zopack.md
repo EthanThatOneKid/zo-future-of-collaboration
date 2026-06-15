@@ -3,7 +3,7 @@ format: zopack
 version: "1.0"
 name: ct-178-climate-spiral
 description: "Hawkins climate spiral — temperature anomalies (Coding Train #178)"
-author: "{{HANDLE}}.zo.computer"
+author: "etok.zo.computer"
 routes: 1
 exported: 2026-05-27
 ---

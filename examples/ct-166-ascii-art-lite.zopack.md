@@ -3,7 +3,7 @@ format: zopack
 version: "1.0"
 name: ct-166-ascii-art-lite
 description: "ASCII art from procedural gradient (Coding Train #166)"
-author: "{{HANDLE}}.zo.computer"
+author: "etok.zo.computer"
 routes: 1
 exported: 2026-05-27
 ---

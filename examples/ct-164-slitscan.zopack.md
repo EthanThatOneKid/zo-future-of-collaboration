@@ -3,7 +3,7 @@ format: zopack
 version: "1.0"
 name: ct-164-slitscan
 description: "Slit-scan time displacement effect (Coding Train #164)"
-author: "{{HANDLE}}.zo.computer"
+author: "etok.zo.computer"
 routes: 1
 exported: 2026-05-27
 ---

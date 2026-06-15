@@ -3,7 +3,7 @@ format: zopack
 version: "1.0"
 name: ct-159-double-pendulum
 description: "Chaotic double pendulum (Coding Train #159)"
-author: "{{HANDLE}}.zo.computer"
+author: "etok.zo.computer"
 routes: 1
 exported: 2026-05-27
 ---
