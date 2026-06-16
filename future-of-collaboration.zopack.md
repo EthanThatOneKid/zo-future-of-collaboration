@@ -702,7 +702,7 @@ function GlobeStage({
   useEffect(() => {
     for (const entry of tileEntriesRef.current) {
       const isSelected = entry.tileId === selectedId;
-      entry.borderMaterial.color.setHex(isSelected ? 0x00a8ff : 0xffffff);
+      entry.borderMaterial.color.setHex(isSelected ? 0xb388ff : 0xffffff);
       entry.borderMaterial.opacity = isSelected ? 0.95 : 0.18;
     }
     if (controlsRef.current) {
@@ -893,8 +893,8 @@ function GlobeStage({
         return material;
       };
 
-      addAtmosphereGlow(1.06, 0x7ecfff, 2.8, 0.38);
-      outerGlowMaterial = addAtmosphereGlow(1.14, 0x2f6fd4, 1.5, 0.16);
+      addAtmosphereGlow(1.06, 0xd4a5ff, 2.8, 0.38);
+      outerGlowMaterial = addAtmosphereGlow(1.14, 0xb388ff, 1.5, 0.16);
 
       const [nx, ny, nz] = findCuboidSubdivisions(tiles.length);
       const totalQuadsCount = 2 * (nx * ny + ny * nz + nz * nx);
@@ -1005,7 +1005,7 @@ function GlobeStage({
 
       for (const entry of tileEntriesRef.current) {
         const isSelected = entry.tileId === selectedIdRef.current;
-        entry.borderMaterial.color.setHex(isSelected ? 0x00a8ff : 0xffffff);
+        entry.borderMaterial.color.setHex(isSelected ? 0xb388ff : 0xffffff);
         entry.borderMaterial.opacity = isSelected ? 0.95 : 0.18;
       }
       if (controlsRef.current) {
@@ -1044,7 +1044,7 @@ function GlobeStage({
   }, [tiles, debugMode]);
 
   return (
-    <div className="relative h-full min-h-0 overflow-hidden bg-[radial-gradient(circle_at_50%_42%,rgba(46,120,210,.28),rgba(21,40,66,.75)_38%,rgba(8,8,10,1)_72%)]">
+    <div className="relative h-full min-h-0 overflow-hidden bg-[radial-gradient(circle_at_50%_42%,rgba(179,136,255,.28),rgba(65,42,92,.75)_38%,rgba(8,8,10,1)_72%)]">
       <div ref={containerRef} className="absolute inset-0" />
       <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10 sm:inset-x-4 sm:bottom-4">
         {debugMode ? (
