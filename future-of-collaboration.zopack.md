@@ -5,7 +5,7 @@ name: future-of-collaboration
 description: "100-tile collaboration wall powered by the live Zo examples index (lavender accent)."
 author: etok.zo.computer
 routes: 1
-exported: 2026-06-15
+exported: 2026-06-16
 ---
 
 # future-of-collaboration
@@ -1185,7 +1185,7 @@ function FutureOfCollaborationContent() {
               <div className="font-mono text-3xl font-black tracking-[0.08em] text-[#b388ff]">zo.collab</div>
               <div className="mt-1 inline-block rounded-md border border-[#b388ff] px-2 py-0.5 font-mono text-sm font-bold text-[#b388ff]">r100</div>
             </div>
-            <div className="font-mono text-xs uppercase tracking-[0.2em] text-white/45 lg:mt-5">prototype · sync probe</div>
+            <div className="font-mono text-xs uppercase tracking-[0.2em] text-white/45 lg:mt-5">prototype · lavender</div>
           </div>
 
           <nav className="hidden h-[calc(100vh-105px)] overflow-y-auto px-4 py-6 font-mono text-[19px] leading-8 lg:block">
